@@ -4,12 +4,10 @@
    
 ⚖️ **License**: [MIT License](LICENSE) - 自由使用、修改、分发，需保留原作者署名。
 
-因为网上找到的北斗网格码编码解码的工具多少都有点问题，官方又没有出编解码工具，遂用java写了一个util实现。
+因为网上找到的北斗网格码编码解码的工具多少都有点问题，官方又没有出编解码工具，遂用java写了一个util实现。util中有编解码方法源码，直接用即可。
 
 本人希望有考虑周全，如果发现有不对的地方请在Issues中提出。
 或者联系我
 van.s.yu@qq.com
-![Uploading d5a9f8ab6505290216364d2c2a31dca7.png…]()
 
-
-util中有编解码方法源码，直接用即可。
+<img width="154" height="202" alt="d5a9f8ab6505290216364d2c2a31dca7" src="https://github.com/user-attachments/assets/6e33e114-fc50-467a-95c3-9837e2079084" />
