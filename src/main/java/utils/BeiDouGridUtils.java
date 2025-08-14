@@ -21,7 +21,7 @@ public class BeiDouGridUtils {
      */
     public static void main(String[] args) {
         // 创建测试坐标点（北京附近）
-        GeoPoint point = GeoPoint.builder().latitude(31.1415575).longitude(120.5830508).build();
+        GeoPoint point = GeoPoint.builder().latitude(31.2720680).longitude(120.637779).build();
 
         // 二维编码测试
         String code2D = encode2D(point, 10);
@@ -135,40 +135,40 @@ public class BeiDouGridUtils {
      */
     private static double[] calculateGridSizes3D() {
         double[] sizes = new double[11];
-        
+
         // 0级长度为0
         sizes[0] = 0;
-        
+
         // 第一级网格：4°
         sizes[1] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * 4.0;
-        
+
         // 第二级网格：30′
         sizes[2] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (30.0/60.0);
-        
+
         // 第三级网格：15′
         sizes[3] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (15.0/60.0);
-        
+
         // 第四级网格：1′
         sizes[4] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (1.0/60.0);
-        
+
         // 第五级网格：4″
         sizes[5] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (4.0/3600.0);
-        
+
         // 第六级网格：2″
         sizes[6] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (2.0/3600.0);
-        
+
         // 第七级网格：1/4″
         sizes[7] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (0.25/3600.0);
-        
+
         // 第八级网格：1/32″
         sizes[8] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (1.0/32.0/3600.0);
-        
+
         // 第九级网格：1/256″
         sizes[9] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (1.0/256.0/3600.0);
-        
+
         // 第十级网格：1/2048″
         sizes[10] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (1.0/2048.0/3600.0);
-        
+
         return sizes;
     }
 
@@ -827,53 +827,53 @@ public class BeiDouGridUtils {
         // 计算高度编码的数学参数
         double theta = 1.0 / 2048 / 3600;
         double theta0 = 1;
-        
+
         // 计算高度编码的值
         int n = (int)Math.floor(
                 (theta0 / theta) *
                         (Math.log((altitude + EARTH_RADIUS) / EARTH_RADIUS) / Math.log(1 + theta0 * (Math.PI / 180)))
         );
-        
+
         // 确定高度方向编码（0表示正，1表示负）
         String signCode = n < 0 ? "1" : "0";
         n = Math.abs(n);
-        
+
         // 将高度编码转换为32位二进制字符串
         StringBuilder binaryString = new StringBuilder();
         binaryString.append(signCode); // 高度方向位
-        
+
         // 生成31位二进制表示
         for (int i = 30; i >= 0; i--) {
             binaryString.append((n >> i) & 1);
         }
-        
+
         // 构建高度编码结果
         StringBuilder altitudeCode = new StringBuilder();
         altitudeCode.append(signCode); // 高度方向位
-        
+
         int binaryIndex = 1; // 跳过高度方向位
-        
+
         // 根据各级网格的高度编码位数和基数，生成各级高度编码
         for (int i = 1; i <= level; i++) {
             int bits = ELEVATION_ENCODING[i][0];
             int radix = ELEVATION_ENCODING[i][1];
-            
+
             // 从二进制字符串中提取对应位数
             String elevationFragment = binaryString.substring(binaryIndex, binaryIndex + bits);
             int codeI = Integer.parseInt(elevationFragment, 2);
-            
+
             // 转换为对应进制的字符串
             String codeStr = Integer.toString(codeI, radix).toUpperCase();
-            
+
             // 第一级需要补零至2位
             if (i == 1) {
                 codeStr = String.format("%2s", codeStr).replace(' ', '0');
             }
-            
+
             altitudeCode.append(codeStr);
             binaryIndex += bits;
         }
-        
+
         return altitudeCode.toString();
     }
 
@@ -897,96 +897,96 @@ public class BeiDouGridUtils {
         // 计算高度编码的数学参数
         double theta = 1.0 / 2048 / 3600;
         double theta0 = 1;
-        
+
         // 计算高度编码的值
         int n = (int)Math.floor(
                 (theta0 / theta) *
                         (Math.log((altitude + EARTH_RADIUS) / EARTH_RADIUS) / Math.log(1 + theta0 * (Math.PI / 180)))
         );
-        
+
         // 确定高度方向编码（0表示正，1表示负）
         String signCode = n < 0 ? "1" : "0";
         n = Math.abs(n);
-        
+
         // 将高度编码转换为32位二进制字符串
         StringBuilder binaryString = new StringBuilder();
         binaryString.append(signCode); // 高度方向位
-        
+
         // 生成31位二进制表示
         for (int i = 30; i >= 0; i--) {
             binaryString.append((n >> i) & 1);
         }
-        
+
         // 获取纬度方向
         String latDirection = point.getLatitude() >= 0 ? "N" : "S";
-        
+
         // 构建结果
         StringBuilder result = new StringBuilder();
         result.append(latDirection); // 纬度方向位
         result.append(signCode); // 高度方向位
-        
+
         double longitude = point.getLongitude();
         double latitude = Math.abs(point.getLatitude()); // 使用纬度绝对值
-        
+
         // 转换为秒
         double lngInSec = longitude * 3600;
         double latInSec = latitude * 3600;
-        
+
         double lngOffset = 0;
         double latOffset = 0;
         int binaryIndex = 1; // 跳过高度方向位
-        
+
         // 逐级编码
         for (int i = 1; i <= level; i++) {
             String fragment2D;
-            
+
             if (i == 1) {
                 // 第一级特殊处理
                 int lngIndex = (int) Math.floor(lngInSec / GRID_SIZES_SECONDS[i][0]);
                 int latIndex = (int) Math.floor(latInSec / GRID_SIZES_SECONDS[i][1]);
-                
+
                 // 更新偏移量
                 lngOffset = (lngIndex >= 0 ? lngIndex : -lngIndex - 1) * GRID_SIZES_SECONDS[i][0];
                 latOffset = latIndex * GRID_SIZES_SECONDS[i][1];
-                
+
                 // 生成二维编码片段
                 fragment2D = encodeFragment(i, lngIndex + 31, latIndex, getHemisphere(point));
             } else {
                 // 其他级别
                 int lngIndex = (int) Math.floor((Math.abs(lngInSec) - lngOffset) / GRID_SIZES_SECONDS[i][0]);
                 int latIndex = (int) Math.floor((Math.abs(latInSec) - latOffset) / GRID_SIZES_SECONDS[i][1]);
-                
+
                 // 更新偏移量
                 lngOffset += lngIndex * GRID_SIZES_SECONDS[i][0];
                 latOffset += latIndex * GRID_SIZES_SECONDS[i][1];
-                
+
                 // 生成二维编码片段
                 fragment2D = encodeFragment(i, lngIndex, latIndex, getHemisphere(point));
             }
-            
+
             // 添加二维编码片段
             result.append(fragment2D);
-            
+
             // 添加高度编码片段
             int bits = ELEVATION_ENCODING[i][0];
             int radix = ELEVATION_ENCODING[i][1];
-            
+
             // 从二进制字符串中提取对应位数
             String elevationFragment = binaryString.substring(binaryIndex, binaryIndex + bits);
             int codeI = Integer.parseInt(elevationFragment, 2);
-            
+
             // 转换为对应进制的字符串
             String codeStr = Integer.toString(codeI, radix).toUpperCase();
-            
+
             // 第一级需要补零至2位
             if (i == 1) {
                 codeStr = String.format("%2s", codeStr).replace(' ', '0');
             }
-            
+
             result.append(codeStr);
             binaryIndex += bits;
         }
-        
+
         return result.toString();
     }
 
