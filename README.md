@@ -6,6 +6,13 @@
 
 因为网上找到的北斗网格码编码解码的工具多少都有点问题，官方又没有出编解码工具，遂用java写了一个util实现。util中有编解码方法源码，直接用即可。
 
+maven配置
+<dependency>
+   <groupId>io.github.ywx001</groupId>
+   <artifactId>beidou-grid-codec</artifactId>
+   <version>1.0.01</version>
+</dependency>
+
 本人希望有考虑周全，如果发现有不对的地方请在Issues中提出。
 或者联系我
 van.s.yu@qq.com
