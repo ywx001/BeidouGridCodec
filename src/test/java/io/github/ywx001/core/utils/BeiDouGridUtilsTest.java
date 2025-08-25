@@ -1,13 +1,13 @@
-package io.github.ywx001;
+package io.github.ywx001.core.utils;
 
 import io.github.ywx001.core.model.BeiDouGeoPoint;
-import io.github.ywx001.utils.BeiDouGridUtils;
+import io.github.ywx001.core.utils.BeiDouGridUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-import static io.github.ywx001.utils.BeiDouGridUtils.*;
+import static io.github.ywx001.core.utils.BeiDouGridUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**

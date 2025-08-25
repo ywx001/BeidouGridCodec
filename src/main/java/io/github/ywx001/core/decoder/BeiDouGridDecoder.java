@@ -17,8 +17,6 @@ public class BeiDouGridDecoder {
     private static final Map<String, int[][]> LEVEL3_ENCODING_MAP_CACHE = new ConcurrentHashMap<>();
     private static final Map<String, int[][]> LEVEL6_ENCODING_MAP_CACHE = new ConcurrentHashMap<>();
 
-    // 经纬度方向枚举（已移动到BeiDouGridConstants类中）
-
     /**
      * 对北斗二维网格位置码解码
      */
