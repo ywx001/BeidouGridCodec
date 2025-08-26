@@ -30,7 +30,7 @@
 <dependency>
    <groupId>io.github.ywx001</groupId>
    <artifactId>beidou-grid-codec</artifactId>
-   <version>1.0.01</version>
+   <version>1.0.02</version>
 </dependency>
 ```
 
