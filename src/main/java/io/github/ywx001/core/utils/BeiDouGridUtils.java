@@ -6,12 +6,55 @@ import io.github.ywx001.core.decoder.BeiDouGridDecoder;
 import io.github.ywx001.core.encoder.BeiDouGridEncoder;
 import io.github.ywx001.core.model.BeiDouGeoPoint;
 import lombok.extern.slf4j.Slf4j;
+import org.locationtech.jts.geom.Geometry;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 北斗网格码工具类
- * 提供公共接口，委托具体的编码和解码工作给专门的类
+ *
+ * <p>提供北斗网格位置码的编码和解码功能，支持二维（经纬度）和三维（经纬度+高度）编码。</p>
+ *
+ * <p><b>主要功能：</b></p>
+ * <ul>
+ *   <li>二维编码：将经纬度坐标转换为北斗网格位置极</li>
+ *   <li>三维编码：将经纬度坐标和高度信息转换为完整的三维网格位置码</li>
+ *   <li>二维解码：将北斗网格位置码还原为经纬度坐标</li>
+ *   <li>三维解码：将三维网格位置码还原为经纬度坐标和高度信息</li>
+ *   <li>半球信息获取：获取坐标所在的半球区域</li>
+ * </ul>
+ *
+ * <p><b>使用示例：</b></p>
+ * <pre>
+ * // 二维编码
+ * BeiDouGeoPoint point = new BeiDouGeoPoint(116.3974, 39.9093, 0);
+ * String gridCode = BeiDouGridUtils.encode2D(point, 6);
+ *
+ * // 二维解码
+ * BeiDouGeoPoint decodedPoint = BeiDouGridUtils.decode2D(gridCode);
+ *
+ * // 三维编码
+ * String full3DCode = BeiDouGridUtils.encode3D(point, 50.0, 6);
+ *
+ * // 获取半球信息
+ * String hemisphere = BeiDouGridUtils.getHemisphere(point);
+ * </pre>
+ *
+ * <p><b>网格级别说明：</b></p>
+ * <p>支持1-10级网格编码，级别越高精度越高：</p>
+ * <ul>
+ *   <li>1级：6°×4°</li>
+ *   <li>2级：3°×2°</li>
+ *   <li>3级：1.5°×1°</li>
+ *   <li>...逐级细分</li>
+ *   <li>10级：最高精度级别</li>
+ * </ul>
+ *
+ * @version 1.0
+ * @see BeiDouGridEncoder 编码器实现
+ * @see BeiDouGridDecoder 解码器实现
+ * @see BeiDouGridConstants 网格常量定义
  */
 @Slf4j
 public class BeiDouGridUtils {
@@ -87,4 +130,16 @@ public class BeiDouGridUtils {
     public static String getHemisphere(BeiDouGeoPoint point) {
         return BeiDouGridConstants.getHemisphere(point);
     }
+
+    /**
+     * 查询与几何图形相交的北斗网格码集合
+     *
+     * @param geometry 查询几何图形（多边形、线、点等）
+     * @param targetLevel 目标网格级别（1-10）
+     * @return 相交的网格码集合
+     */
+    public static Set<String> findIntersectingGridCodes(Geometry geometry, int targetLevel) {
+        return BeiDouGridRangeQuery.findGridCodesInRange(geometry, targetLevel);
+    }
+
 }

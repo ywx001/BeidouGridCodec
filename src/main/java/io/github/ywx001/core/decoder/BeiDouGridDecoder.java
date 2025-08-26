@@ -18,7 +18,7 @@ public class BeiDouGridDecoder {
     private static final Map<String, int[][]> LEVEL6_ENCODING_MAP_CACHE = new ConcurrentHashMap<>();
 
     /**
-     * 对北斗二维网格位置码解码
+     * 对北斗二维网格位置码解码（所在网格左下角点）
      */
     public BeiDouGeoPoint decode2D(String code) {
         if (code == null || code.isEmpty()) {

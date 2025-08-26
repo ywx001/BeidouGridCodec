@@ -28,5 +28,5 @@
     </root>
 
     <!-- 特定包的日志级别 -->
-    <logger name="utils" level="DEBUG" />
+    <logger name="io.github.ywx001.core.utils" level="DEBUG" />
 </configuration>

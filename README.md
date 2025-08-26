@@ -54,6 +54,45 @@ String code3D = BeiDouGridUtils.encode3D(point, 50, 10);
 Map<String, Object> decoded3D = BeiDouGridUtils.decode3D(code3D);
 ```
 
+## 空间查询
+
+新增的空间范围查询功能，支持根据几何图形查找相交的北斗网格码：
+
+```java
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import java.util.Set;
+
+// 创建查询几何图形（多边形示例）
+GeometryFactory geometryFactory = new GeometryFactory();
+Coordinate[] coordinates = new Coordinate[]{
+    new Coordinate(116.3974, 39.9093),
+    new Coordinate(116.4074, 39.9093), 
+    new Coordinate(116.4074, 39.9193),
+    new Coordinate(116.3974, 39.9193),
+    new Coordinate(116.3974, 39.9093) // 闭合多边形
+};
+Geometry queryPolygon = geometryFactory.createPolygon(coordinates);
+
+// 查找与多边形相交的6级网格码
+Set<String> gridCodes = BeiDouGridUtils.findIntersectingGridCodes(queryPolygon, 6);
+
+// 输出结果示例: ["N39A123456", "N39A123457", "N39A123458"]
+```
+
+**功能特点：**
+- 支持多种几何类型：多边形(Polygon)、线(LineString)、点(Point)
+- 多级网格筛选优化，快速定位相交网格
+- 并行计算支持，处理大规模网格数据
+- 数学优化判断，减少几何计算开销
+
+**适用场景：**
+- 地理围栏和区域监控
+- 空间索引和范围查询  
+- 网格化空间分析
+- 地理信息系统(GIS)集成
+
 ## API 文档
 
 详细的API文档请查看 [Javadoc](target/apidocs/index.html)
