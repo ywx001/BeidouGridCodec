@@ -25,7 +25,7 @@ public class BeiDouGridDecoder {
             throw new IllegalArgumentException("位置码不能为空");
         }
 
-        int level = getCodeLevel(code);
+        int level = getCodeLevel2D(code);
         Map<String, String> directions = getDirections(code);
         BeiDouGridConstants.LngDirection lngDir = BeiDouGridConstants.LngDirection.valueOf(directions.get("lngDirection"));
         BeiDouGridConstants.LatDirection latDir = BeiDouGridConstants.LatDirection.valueOf(directions.get("latDirection"));
@@ -70,22 +70,22 @@ public class BeiDouGridDecoder {
     }
 
     /**
-     * 获取位置码的层级
+     * 获取二维网格码的层级
      */
-    private int getCodeLevel(String code) {
+    public static int getCodeLevel2D(String code) {
         int length = code.length();
         for (int i = 0; i < BeiDouGridConstants.CODE_LENGTH_AT_LEVEL.length; i++) {
             if (BeiDouGridConstants.CODE_LENGTH_AT_LEVEL[i] == length) {
                 return i;
             }
         }
-        throw new IllegalArgumentException("无效的位置码长度: " + length);
+        throw new IllegalArgumentException("无效的二维网格码长度: " + length);
     }
 
     /**
-     * 获取三维位置码的层级
+     * 获取三维网格码的层级
      */
-    private int getCodeLevel3D(String code) {
+    public static int getCodeLevel3D(String code) {
         int length = code.length();
         for (int level = 1; level <= 10; level++) {
             int expectedLength = 2;
@@ -97,7 +97,7 @@ public class BeiDouGridDecoder {
                 return level;
             }
         }
-        throw new IllegalArgumentException("无效的三维位置码长度: " + code);
+        throw new IllegalArgumentException("无效的三维网格码码长度: " + code);
     }
 
     /**
@@ -317,7 +317,7 @@ public class BeiDouGridDecoder {
     /**
      * 从三维编码中提取二维编码部分
      */
-    private String extract2DCode(String code3D, int level) {
+    public String extract2DCode(String code3D, int level) {
         StringBuilder code2D = new StringBuilder();
         code2D.append(code3D.charAt(0));
 
@@ -339,7 +339,7 @@ public class BeiDouGridDecoder {
     }
 
     /**
-     * 从三维编码中解码高度信息
+     * 从三维编码中解码高度信息（网格底平面高度）
      */
     private double decode3DAltitude(String code, int level) {
         int altitudeSign = code.charAt(1) == '0' ? 1 : -1;

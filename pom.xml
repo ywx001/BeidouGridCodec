@@ -6,7 +6,7 @@
 
     <groupId>io.github.ywx001</groupId>
     <artifactId>beidou-grid-codec</artifactId>
-    <version>1.0.02</version>
+    <version>1.0.03</version>
     <packaging>jar</packaging>
 
     <name>BeiDou Grid Codec</name>
@@ -53,14 +53,12 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.36</version>
+            <version>1.7.30</version>
         </dependency>
-
-        <!-- Logback Classic (SLF4J实现) -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.5.13</version>
+            <version>1.2.3</version>
         </dependency>
 
         <!-- JUnit 5 for testing -->
@@ -69,12 +67,6 @@
             <artifactId>junit-jupiter</artifactId>
             <version>5.9.3</version>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <version>2.17.1</version>
         </dependency>
 
         <!-- JTS Topology Suite for spatial operations -->
@@ -160,11 +152,6 @@
                         <goals>
                             <goal>sign</goal>
                         </goals>
-                        <configuration>
-                            <executable>C:\Program Files (x86)\GnuPG\bin\gpg.exe</executable>
-                            <keyname>F199261DC552B6F1</keyname>
-                            <passphraseServerId>gpg-passphrase</passphraseServerId>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

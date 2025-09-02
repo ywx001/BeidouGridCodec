@@ -1,5 +1,6 @@
 package io.github.ywx001.core.utils;
 
+import io.github.ywx001.core.decoder.BeiDouGridDecoder;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
@@ -15,47 +16,51 @@ import static org.junit.jupiter.api.Assertions.*;
  * 北斗网格范围查询工具测试类
  */
 @Slf4j
-class BeiDouGridRangeQueryTest {
+class BeiDouGrid2DRangeQueryTest {
 
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
 
+    private static final BeiDouGridDecoder decoder = new BeiDouGridDecoder();
+
     @Test
-    void testFindGridCodesInRangeWithSmallPolygon() {
+    void testFind2DGridCodesInRangeWithSmallPolygon() {
         // 创建一个小的多边形（北京故宫区域）
         Coordinate[] polygonCoords = new Coordinate[]{
-            new Coordinate(116.391, 39.913),
-            new Coordinate(116.401, 39.913),
-            new Coordinate(116.401, 39.923),
-            new Coordinate(116.391, 39.923),
-            new Coordinate(116.391, 39.913)
+                new Coordinate(116.391, 39.913),
+                new Coordinate(116.401, 39.913),
+                new Coordinate(116.401, 39.923),
+                new Coordinate(116.391, 39.923),
+                new Coordinate(116.391, 39.913)
         };
         // 查找网格码层级
-        int targetLevel = 7;
+        int targetLevel = 8;
 
         Geometry polygon = GEOMETRY_FACTORY.createPolygon(polygonCoords);
-        System.out.println("初始数据"+ new GeoJsonWriter().write(polygon));
+        log.info("初始数据{}", new GeoJsonWriter().write(polygon));
         // 查找网格码
-        Set<String> gridCodes = BeiDouGridUtils.findIntersectingGridCodes(polygon, targetLevel);
+        Set<String> gridCodes = BeiDouGridUtils.find2DIntersectingGridCodes(polygon, targetLevel);
 
         assertNotNull(gridCodes);
         assertFalse(gridCodes.isEmpty());
 
-        System.out.println("找到 " + gridCodes.size() + " 个"+targetLevel+"级网格码:");
-        gridCodes.forEach(System.out::println);
+        log.info("找到 {} 个{}级二维网格码:", gridCodes.size(), targetLevel);
+//        for(String code : gridCodes) {
+//            assertTrue(BeiDouGrid2DRangeQuery.isGridIntersectsMath(code, polygon));
+//        }
     }
 
     @Test
     void testFindGridCodesInRangeWithLineString() {
         // 创建一个线（长安街一段）
         Coordinate[] lineCoords = new Coordinate[]{
-            new Coordinate(116.35, 39.90),
-            new Coordinate(116.45, 39.90)
+                new Coordinate(116.35, 39.90),
+                new Coordinate(116.45, 39.90)
         };
 
         Geometry line = GEOMETRY_FACTORY.createLineString(lineCoords);
 
         // 查找二级网格码
-        Set<String> gridCodes = BeiDouGridRangeQuery.findGridCodesInRange(line, 2);
+        Set<String> gridCodes = BeiDouGrid2DRangeQuery.findGridCodesInRange(line, 2);
 
         assertNotNull(gridCodes);
         assertFalse(gridCodes.isEmpty());
@@ -72,12 +77,31 @@ class BeiDouGridRangeQueryTest {
     }
 
     @Test
+    void testFindGridCodesInRangeWithPoint() {
+        // 创建一个点
+        Coordinate pointCoords = new Coordinate(120.5830508, 31.1415575);
+        // 查找网格码层级
+        int targetLevel = 10;
+
+        Geometry point = GEOMETRY_FACTORY.createPoint(pointCoords);
+
+        // 查找二级网格码
+        Set<String> gridCodes = BeiDouGrid2DRangeQuery.findGridCodesInRange(point, targetLevel);
+
+        assertNotNull(gridCodes);
+        assertFalse(gridCodes.isEmpty());
+
+        System.out.println("找到 " + gridCodes.size() + " 个" + targetLevel + "级网格码:");
+        gridCodes.forEach(System.out::println);
+    }
+
+    @Test
     void testSpatialRelationEnum() {
         // 测试空间关系枚举值
-        BeiDouGridRangeQuery.SpatialRelation contains = BeiDouGridRangeQuery.SpatialRelation.CONTAINS;
-        BeiDouGridRangeQuery.SpatialRelation intersects = BeiDouGridRangeQuery.SpatialRelation.INTERSECTS;
-        BeiDouGridRangeQuery.SpatialRelation within = BeiDouGridRangeQuery.SpatialRelation.WITHIN;
-        BeiDouGridRangeQuery.SpatialRelation disjoint = BeiDouGridRangeQuery.SpatialRelation.DISJOINT;
+        BeiDouGrid2DRangeQuery.SpatialRelation contains = BeiDouGrid2DRangeQuery.SpatialRelation.CONTAINS;
+        BeiDouGrid2DRangeQuery.SpatialRelation intersects = BeiDouGrid2DRangeQuery.SpatialRelation.INTERSECTS;
+        BeiDouGrid2DRangeQuery.SpatialRelation within = BeiDouGrid2DRangeQuery.SpatialRelation.WITHIN;
+        BeiDouGrid2DRangeQuery.SpatialRelation disjoint = BeiDouGrid2DRangeQuery.SpatialRelation.DISJOINT;
 
         assertNotNull(contains);
         assertNotNull(intersects);
@@ -89,25 +113,27 @@ class BeiDouGridRangeQueryTest {
     void testInvalidParameters() {
         // 测试参数验证
         assertThrows(IllegalArgumentException.class, () -> {
-            BeiDouGridRangeQuery.findGridCodesInRange(null, 3);
+            BeiDouGrid2DRangeQuery.findGridCodesInRange(null, 3);
         });
 
         assertThrows(IllegalArgumentException.class, () -> {
             Geometry geom = GEOMETRY_FACTORY.createPoint(new Coordinate(116.0, 39.0));
-            BeiDouGridRangeQuery.findGridCodesInRange(geom, 0);
+            BeiDouGrid2DRangeQuery.findGridCodesInRange(geom, 0);
         });
 
         assertThrows(IllegalArgumentException.class, () -> {
             Geometry geom = GEOMETRY_FACTORY.createPoint(new Coordinate(116.0, 39.0));
-            BeiDouGridRangeQuery.findGridCodesInRange(geom, 11);
+            BeiDouGrid2DRangeQuery.findGridCodesInRange(geom, 11);
         });
     }
 
     @Test
     void testCreateGridPolygon() {
         // 测试网格码
-        String g = "N50J47595013";
-        Geometry p = BeiDouGridRangeQuery.createGridPolygon(g);
+        String g = "N050K0040010";
+        String s = decoder.extract2DCode(g, 3);
+        Geometry p = BeiDouGrid2DRangeQuery.createGridPolygon(s);
+        System.out.println(new GeoJsonWriter().write(p));
 
 //        // 测试一级网格码
 //        String level1Grid = "N31A";

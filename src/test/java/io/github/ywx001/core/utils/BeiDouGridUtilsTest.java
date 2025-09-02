@@ -1,11 +1,11 @@
 package io.github.ywx001.core.utils;
 
 import io.github.ywx001.core.model.BeiDouGeoPoint;
-import io.github.ywx001.core.utils.BeiDouGridUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.Set;
 
 import static io.github.ywx001.core.utils.BeiDouGridUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,7 +22,7 @@ class BeiDouGridUtilsTest {
     @Test
     void testAll() {
         // 创建测试坐标点
-        BeiDouGeoPoint point = BeiDouGeoPoint.builder().latitude(31.1415575).longitude(120.5830508).build();
+        BeiDouGeoPoint point = BeiDouGeoPoint.builder().latitude(31.1415575).longitude(120.5830508).altitude(50).build();
 
         // 二维编码测试
         String code2D = encode2D(point, 10);
@@ -37,7 +37,7 @@ class BeiDouGridUtilsTest {
         log.info("高度编码: {}", altitudeCode);
 
         // 完整三维编码测试
-        String code3D = encode3D(point, 50, 10);
+        String code3D = encode3D(point, 10);
         log.info("三维编码: {}", code3D);
 
         // 三维解码测试
@@ -78,16 +78,17 @@ class BeiDouGridUtilsTest {
         BeiDouGeoPoint point = BeiDouGeoPoint.builder()
                 .latitude(31.1415575)
                 .longitude(120.5830508)
+                .altitude(50)
                 .build();
 
-        String code3D = BeiDouGridUtils.encode3D(point, 50, 5);
+        String code3D = BeiDouGridUtils.encode3D(point, 5);
         assertNotNull(code3D);
         assertTrue(code3D.startsWith("N"));
     }
 
     @Test
     void testDecode3D() {
-        String code3D = "N031A0000";
+        String code3D = "N050J0047050";
         Map<String, Object> result = BeiDouGridUtils.decode3D(code3D);
         assertNotNull(result);
         assertTrue(result.containsKey("geoPoint"));
@@ -103,4 +104,21 @@ class BeiDouGridUtilsTest {
         String hemisphere = BeiDouGridUtils.getHemisphere(point);
         assertEquals("NE", hemisphere);
     }
+
+    @Test
+    void testGetChild2DGrids() {
+        String code2D = "N31A";
+        Set<String> result = BeiDouGridUtils.getChild2DGrids(code2D);
+        log.info("生成子级2维网格码: {}", result);
+        assertNotNull(result);
+    }
+
+    @Test
+    void testGetChild3DGrids() {
+        String code3D = "N050J0047050";
+        Set<String> result = BeiDouGridUtils.getChild3DGrids(code3D);
+        log.info("生成子级3维网格码: {}", result);
+        assertNotNull(result);
+    }
+
 }

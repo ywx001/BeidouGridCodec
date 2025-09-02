@@ -88,17 +88,16 @@ public class BeiDouGridUtils {
     /**
      * 对一个经纬度坐标和高度进行三维编码（完整三维编码）
      *
-     * @param point    经纬度坐标
-     * @param altitude 高度（单位：米）
-     * @param level    要编码到第几级
+     * @param point 经纬高度坐标
+     * @param level 要编码到第几级
      * @return 北斗三维网格位置码
      */
-    public static String encode3D(BeiDouGeoPoint point, double altitude, Integer level) {
-        return encoder.encode3D(point, altitude, level);
+    public static String encode3D(BeiDouGeoPoint point, Integer level) {
+        return encoder.encode3D(point, level);
     }
 
     /**
-     * 对北斗二维网格位置码解码
+     * 对北斗二维网格位置码解码（所在网格西南角点，即左下角点）
      *
      * @param code 需要解码的北斗二维网格位置码
      * @return 经纬度坐标
@@ -132,14 +131,91 @@ public class BeiDouGridUtils {
     }
 
     /**
-     * 查询与几何图形相交的北斗网格码集合
+     * 生成指定二维父网格的所有二维子网格集合
      *
-     * @param geometry 查询几何图形（多边形、线、点等）
-     * @param targetLevel 目标网格级别（1-10）
-     * @return 相交的网格码集合
+     * 功能说明：
+     * 1. 自动识别父网格的级别，并生成下一级别的子网格。
+     * 2. 子网格的生成基于北斗网格编码规范，确保唯一性和正确性。
+     *
+     * 使用场景：
+     * - 需要将父网格细化为更小粒度的子网格时（如地图分层展示、空间分析等）。
+     *
+     * @param parentGrid 父网格编码（格式示例：NE12345678）
+     *                  - 必须为有效的北斗二维网格码
+     *                  - 编码级别需小于10（最高级网格无子网格）
+     * @return 子网格集合（Set<String>）
+     *         - 每个子网格的级别为父网格级别 + 1
+     *         - 集合无序但保证唯一性
+     *
+     * @throws IllegalArgumentException 如果参数不合法：
+     *         - parentGrid格式无效
+     *         - parentGrid是10级网格（无子网格）
+     *
+     * @see BeiDouGrid2DRangeQuery#generateChildGrids2D 二维子网格生成实现
      */
-    public static Set<String> findIntersectingGridCodes(Geometry geometry, int targetLevel) {
-        return BeiDouGridRangeQuery.findGridCodesInRange(geometry, targetLevel);
+    public static Set<String> getChild2DGrids(String parentGrid) {
+        return BeiDouGrid2DRangeQuery.generateChildGrids2D(parentGrid);
+    }
+
+    /**
+     * 生成指定三维父网格的所有三维子网格集合
+     *
+     * 功能说明：
+     * 1. 自动识别父网格的级别，并生成下一级别的子网格（包括高度方向）。
+     * 2. 子网格的生成基于北斗网格编码规范，确保唯一性和正确性。
+     *
+     * 使用场景：
+     * - 需要将父网格细化为更小粒度的子网格时（如三维空间分析、高度分层等）。
+     *
+     * @param parentGrid 父网格编码（格式示例：NE123456789）
+     *                  - 必须为有效的北斗三维网格码
+     *                  - 编码级别需小于10（最高级网格无子网格）
+     * @return 子网格集合（Set<String>）
+     *         - 每个子网格的级别为父网格级别 + 1
+     *         - 集合无序但保证唯一性
+     *
+     * @throws IllegalArgumentException 如果参数不合法：
+     *         - parentGrid格式无效
+     *         - parentGrid是10级网格（无子网格）
+     *
+     * @see BeiDouGrid3DRangeQuery#generateChildGrids3D 三维子网格生成实现
+     */
+    public static Set<String> getChild3DGrids(String parentGrid) {
+        return BeiDouGrid3DRangeQuery.generateChildGrids3D(parentGrid);
+    }
+
+    /**
+     * 查询与几何图形相交的二维北斗网格码集合
+     * <p>
+     * 本方法是 {@link BeiDouGrid2DRangeQuery#find2DGridCodesInRange} 的便捷封装，
+     * 用于根据几何图形获取相交的二维网格码集合。
+     *
+     * @param geometry    查询几何图形（支持点、线、多边形等JTS几何类型）
+     * @param targetLevel 目标网格级别（1-10）
+     * @return 与几何图形相交的所有指定级别二维网格码集合
+     * @throws IllegalArgumentException 如果参数不合法（几何图形为空、级别越界或高度范围无效）
+     * @see BeiDouGrid2DRangeQuery#find2DGridCodesInRange 实际执行二维查询的方法
+     */
+    public static Set<String> find2DIntersectingGridCodes(Geometry geometry, int targetLevel) {
+        return BeiDouGrid2DRangeQuery.find2DGridCodesInRange(geometry, targetLevel);
+    }
+
+    /**
+     * 查找与几何图形相交的三维网格码（指定高度范围）
+     * <p>
+     * 本方法是 {@link BeiDouGrid3DRangeQuery#find3DGridCodesInRange} 的便捷封装，
+     * 用于根据几何图形和高度范围获取相交的三维网格码集合。
+     *
+     * @param geometry    几何图形对象（支持点、线、多边形等JTS几何类型）
+     * @param targetLevel 目标网格级别（1-10）
+     * @param minAltitude 最小海拔高度（单位：米）
+     * @param maxAltitude 最大海拔高度（单位：米）
+     * @return 与几何图形相交的所有指定级别三维网格码集合
+     * @throws IllegalArgumentException 如果参数不合法（几何图形为空、级别越界或高度范围无效）
+     * @see BeiDouGrid3DRangeQuery#find3DGridCodesInRange 实际执行三维查询的方法
+     */
+    public static Set<String> find3DIntersectingGridCodes(Geometry geometry, int targetLevel, double minAltitude, double maxAltitude) {
+        return BeiDouGrid3DRangeQuery.find3DGridCodesInRange(geometry, targetLevel, minAltitude, maxAltitude);
     }
 
 }

@@ -1,0 +1,96 @@
+package io.github.ywx001.core.utils;
+
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Test;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.PrecisionModel;
+import org.locationtech.jts.io.geojson.GeoJsonWriter;
+
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@Slf4j
+class BeiDouGrid3DRangeQueryTest {
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
+
+    @Test
+    void testFind3DGridCodesInRangeWithExplicitAltitude() {
+        // 创建一个简单的矩形几何图形（包含高度数据）
+        Coordinate[] coordinates = new Coordinate[]{
+                new Coordinate(116.391, 39.913, 100),
+                new Coordinate(116.401, 39.913, 100),
+                new Coordinate(116.401, 39.923, 100),
+                new Coordinate(116.391, 39.923, 100),
+                new Coordinate(116.391, 39.913, 100)
+        };
+        Geometry geom = GEOMETRY_FACTORY.createPolygon(coordinates);
+        log.info("初始数据{}", new GeoJsonWriter().write(geom));
+        // 查询网格
+        Set<String> result = BeiDouGridUtils.find3DIntersectingGridCodes(
+                geom, 8, 0, 0);
+
+
+        assertNotNull(result);
+        assertFalse(result.isEmpty());
+    }
+
+    @Test
+    void testFind3DGridCodesInRangeWithAutoAltitude() {
+        // 创建一个简单的矩形几何图形（包含高度数据）
+        Coordinate[] coordinates = new Coordinate[]{
+                new Coordinate(116.3, 39.9, 100),
+                new Coordinate(116.4, 39.9, 120),
+                new Coordinate(116.4, 40.0, 120),
+                new Coordinate(116.3, 40.0, 100),
+                new Coordinate(116.3, 39.9, 100)
+        };
+        Geometry geom = GEOMETRY_FACTORY.createPolygon(coordinates);
+
+        // 查询3级网格（自动计算高度范围）
+        Set<String> result = BeiDouGrid3DRangeQuery.find3DGridCodesInRange(
+                geom, 3);
+
+        assertNotNull(result);
+        assertFalse(result.isEmpty());
+        // 验证结果网格码格式
+        result.forEach(code -> {
+            assertTrue(code.startsWith("N")); // 纬度方向
+            assertTrue(code.length() >= 5); // 3级网格码长度
+        });
+    }
+
+    @Test
+    void testParameterValidation() {
+        // 测试空几何图形
+        assertThrows(IllegalArgumentException.class, () -> BeiDouGrid3DRangeQuery.find3DGridCodesInRange(null, 3));
+
+        // 测试无效层级
+        Geometry geom = GEOMETRY_FACTORY.createPoint(new Coordinate(116.3, 39.9));
+        assertThrows(IllegalArgumentException.class, () -> BeiDouGrid3DRangeQuery.find3DGridCodesInRange(geom, 0));
+        assertThrows(IllegalArgumentException.class, () -> BeiDouGrid3DRangeQuery.find3DGridCodesInRange(geom, 11));
+
+        // 测试无效高度范围
+        assertThrows(IllegalArgumentException.class, () -> BeiDouGrid3DRangeQuery.find3DGridCodesInRange(geom, 3, 200, 100));
+    }
+
+    @Test
+    void testExtractAltitudePointsFromGeometry() {
+        // 创建一个包含多个高度点的几何图形
+        Coordinate[] coordinates = new Coordinate[]{
+                new Coordinate(116.3, 39.9, 100),
+                new Coordinate(116.4, 39.9, 120),
+                new Coordinate(116.4, 40.0, 150),
+                new Coordinate(116.3, 40.0, 100)
+        };
+        Geometry geom = GEOMETRY_FACTORY.createLineString(coordinates);
+
+        Set<Double> altitudes = BeiDouGrid3DRangeQuery.extractAltitudePointsFromGeometry(geom);
+        assertEquals(3, altitudes.size()); // 去重后的高度点数量
+        assertTrue(altitudes.contains(100.0));
+        assertTrue(altitudes.contains(120.0));
+        assertTrue(altitudes.contains(150.0));
+    }
+}

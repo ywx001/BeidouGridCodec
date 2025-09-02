@@ -27,6 +27,4 @@
         <appender-ref ref="FILE" />
     </root>
 
-    <!-- 特定包的日志级别 -->
-    <logger name="io.github.ywx001.core.utils" level="DEBUG" />
 </configuration>

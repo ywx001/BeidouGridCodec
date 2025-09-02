@@ -1,34 +1,82 @@
 package io.github.ywx001.core.utils;
 
 import io.github.ywx001.core.constants.BeiDouGridConstants;
+import io.github.ywx001.core.decoder.BeiDouGridDecoder;
 import io.github.ywx001.core.model.BeiDouGeoPoint;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.*;
 import org.locationtech.jts.io.geojson.GeoJsonWriter;
-import org.locationtech.jts.util.GeometricShapeFactory;
 
 import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
- * 北斗网格范围查询工具类
+ * 北斗二维网格范围查询工具类
  * 根据几何图形（多边形或线）生成包含的北斗网格码集合
  */
 @Slf4j
-public class BeiDouGridRangeQuery {
+public class BeiDouGrid2DRangeQuery {
 
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
 
-
     /**
-     * 主方法：根据几何图形查找相交的网格码
+     * 主方法：根据几何图形查找相交的二维网格码
      *
-     * @param geom 几何图形对象，支持多边形、线、点等JTS几何类型
+     * @param geom        几何图形对象，支持多边形、线、点等JTS几何类型
      * @param targetLevel 目标网格级别，范围1-10
      * @return 与几何图形相交的所有指定级别网格码集合
-     * @throws IllegalArgumentException 如果几何图形为空或目标级别不在1-10范围内
+     * @throws IllegalArgumentException 如果几何图形为空或目标级别不在 1-10 范围内
      */
+    public static Set<String> find2DGridCodesInRange(Geometry geom, int targetLevel) {
+        long startTime = System.currentTimeMillis();
+        validateParameters(geom, targetLevel);
+
+        Set<String> result = new HashSet<>();
+
+        Envelope envelope = geom.getEnvelopeInternal();
+        double minLng = envelope.getMinX();
+        double maxLng = envelope.getMaxX();
+        double minLat = envelope.getMinY();
+        double maxLat = envelope.getMaxY();
+
+        // 获取目标层级的网格尺寸
+        BigDecimal[] gridSize = BeiDouGridConstants.GRID_SIZES_DEGREES[targetLevel];
+        double lngSize = gridSize[0].doubleValue();
+        double latSize = gridSize[1].doubleValue();
+
+        // 生成候选网格
+        for (double lng = minLng; lng <= maxLng + lngSize; lng += lngSize) {
+            for (double lat = minLat; lat <= maxLat + latSize; lat += latSize) {
+
+                // 生成网格编码
+                String gridCode = BeiDouGridUtils.encode2D(
+                        new BeiDouGeoPoint(lng, lat, 0), targetLevel
+                );
+
+                // 检查网格是否与几何图形相交
+                if (isGridIntersectsMath(gridCode, geom, envelope)) {
+                    result.add(gridCode);
+                }
+            }
+        }
+
+        long totalTime = System.currentTimeMillis() - startTime;
+        log.debug("总计算完成：找到 {} 个{}级网格，总耗时 {}ms", result.size(), targetLevel, totalTime);
+
+
+        return result;
+    }
+
+    /**
+     * 主方法：根据几何图形查找相交的二维网格码(已过时，请参考find2DGridCodesInRange)
+     *
+     * @param geom        几何图形对象，支持多边形、线、点等JTS几何类型
+     * @param targetLevel 目标网格级别，范围1-10
+     * @return 与几何图形相交的所有指定级别网格码集合
+     * @throws IllegalArgumentException 如果几何图形为空或目标级别不在 1-10 范围内
+     */
+    @Deprecated
     public static Set<String> findGridCodesInRange(Geometry geom, int targetLevel) {
         long startTime = System.currentTimeMillis();
         validateParameters(geom, targetLevel);
@@ -46,8 +94,7 @@ public class BeiDouGridRangeQuery {
         level1Grids.parallelStream().forEach(level1Grid -> refineGrid(level1Grid, geom, targetLevel, 1, result));
 
         long totalTime = System.currentTimeMillis() - startTime;
-        log.info("总计算完成：找到 {} 个{}级网格，总耗时 {}ms",
-                result.size(), targetLevel, totalTime);
+        log.debug("总计算完成：找到 " + result.size() + " 个" + targetLevel + "级网格，总耗时 " + totalTime + "ms");
 
         return result;
     }
@@ -105,7 +152,7 @@ public class BeiDouGridRangeQuery {
         Envelope geomEnvelope = geom.getEnvelopeInternal();
 
         // 生成当前层级网格的所有子网格
-        Set<String> childGrids = generateChildGrids(parentGrid, currentLevel);
+        Set<String> childGrids = generateChildGrids2D(parentGrid);
 
         long generateTime = System.currentTimeMillis() - startTime;
 
@@ -170,10 +217,31 @@ public class BeiDouGridRangeQuery {
     }
 
     /**
-     * 生成子网格
+     * 生成指定2维父网格的所有2维子网格集合
+     *
+     * @param parentGrid 父网格编码，自动识别其级别（格式示例：N50J475）
+     *                   - 必须为有效的北斗二维网格码
+     *                   - 编码级别需小于10（最高级网格无子网格）
+     *                   - 1级网格的子网格为2级，依此类推
+     * @return 子网格集合（可能为空集合）
+     * - 每个子网格的级别为 parentGrid的级别 + 1
+     * - 集合无序但保证唯一性
+     * @throws IllegalArgumentException 如果参数不合法：
+     *                                  - parentGrid格式无效
+     *                                  - parentGrid层级超出1-9范围
+     * @see BeiDouGridUtils#decode2D 网格解码实现
+     * @see BeiDouGridConstants#GRID_DIVISIONS 各级网格划分规则
+     * @see BeiDouGridConstants#GRID_SIZES_DEGREES 各级网格尺寸定义
      */
-    private static Set<String> generateChildGrids(String parentGrid, int currentLevel) {
+    public static Set<String> generateChildGrids2D(String parentGrid) {
         long startTime = System.currentTimeMillis();
+        // 当前二维网格码层级
+        int currentLevel = BeiDouGridDecoder.getCodeLevel2D(parentGrid);
+
+        if (currentLevel < 1 || currentLevel >= 10) {
+            throw new IllegalArgumentException("只能生成1-9级网格的子网格");
+        }
+
         Set<String> childGrids = new HashSet<>();
 
         // 解码父网格获取西南角点（注意：解码器返回的是网格的西南角点，不是中心点）
@@ -274,42 +342,59 @@ public class BeiDouGridRangeQuery {
     }
 
     /**
-     * 纯数学方法判断网格与几何图形是否相交
-     * 完全避免JTS几何计算
+     * 纯数学方法判断网格与几何图形是否相交（避免JTS几何计算）
+     *
+     * @param gridCode     北斗网格编码
+     * @param geom         待检测的几何图形（点/线/面）
+     * @param geomEnvelope 几何图形的外包矩形（用于快速预判）
+     * @return 是否相交
      */
-    private static boolean isGridIntersectsMath(String gridCode, Geometry geom, Envelope geomEnvelope) {
+    public static boolean isGridIntersectsMath(String gridCode, Geometry geom, Envelope geomEnvelope) {
+        // 1. 网格解码并记录耗时
         long decodeStart = System.nanoTime();
         BeiDouGeoPoint swCorner = BeiDouGridUtils.decode2D(gridCode);
         long decodeTime = System.nanoTime() - decodeStart;
         if (decodeTime > 100000) { // 超过100μs的记录
             log.debug("网格解码 {} 耗时: {}μs", gridCode, decodeTime / 1000);
         }
+
+        // 2. 获取网格级别和宽高
         int level = getGridLevel(gridCode);
         double gridWidth = getGridWidth(level);
         double gridHeight = getGridHeight(level);
 
+        // 3. 计算网格的经纬度边界
         double rectMinX = swCorner.getLongitude();
         double rectMaxX = rectMinX + gridWidth;
         double rectMinY = swCorner.getLatitude();
         double rectMaxY = rectMinY + gridHeight;
 
-        // 快速边界框检查
+        // 4. 快速边界框检查（快速排除不相交的情况）
         if (rectMaxX < geomEnvelope.getMinX() || rectMinX > geomEnvelope.getMaxX() ||
                 rectMaxY < geomEnvelope.getMinY() || rectMinY > geomEnvelope.getMaxY()) {
             return false;
         }
 
-        // 根据几何类型使用不同的数学判断
-        if (geom instanceof Point) {
-            return isPointInRectangleMath(geom.getCoordinate(), rectMinX, rectMaxX, rectMinY, rectMaxY);
-        } else if (geom instanceof LineString) {
-            return isLineIntersectsRectangleMath((LineString) geom, rectMinX, rectMaxX, rectMinY, rectMaxY);
-        } else if (geom instanceof Polygon) {
-            return isPolygonIntersectsRectangleMath((Polygon) geom, rectMinX, rectMaxX, rectMinY, rectMaxY);
+        // 5. 根据几何类型分别判断
+        switch (geom.getClass().getSimpleName()) {
+            case "Point":
+                return isPointInRectangleMath(geom.getCoordinate(), rectMinX, rectMaxX, rectMinY, rectMaxY);
+            case "LineString":
+                return isLineIntersectsRectangleMath((LineString) geom, rectMinX, rectMaxX, rectMinY, rectMaxY);
+            case "Polygon":
+                return isPolygonIntersectsRectangleMath((Polygon) geom, rectMinX, rectMaxX, rectMinY, rectMaxY);
+            default:
+                // 复杂几何回退到JTS原方法
+                return geom.intersects(createGridPolygon(gridCode));
         }
+    }
 
-        // 复杂几何回退到原方法
-        return geom.intersects(createGridPolygon(gridCode));
+    /**
+     * 纯数学方法判断网格与几何图形是否相交
+     * 完全避免JTS几何计算
+     */
+    public static boolean isGridIntersectsMath(String gridCode, Geometry geom) {
+        return isGridIntersectsMath(gridCode, geom, geom.getEnvelopeInternal());
     }
 
     // 点与矩形相交判断

@@ -123,12 +123,11 @@ public class BeiDouGridEncoder {
     /**
      * 对一个经纬度坐标和高度进行三维编码（完整三维编码）
      *
-     * @param point    经纬度坐标
-     * @param altitude 高度（单位：米）
+     * @param point    经纬高度坐标
      * @param level    要编码到第几级
      * @return 北斗三维网格位置码
      */
-    public String encode3D(BeiDouGeoPoint point, double altitude, Integer level) {
+    public String encode3D(BeiDouGeoPoint point, Integer level) {
         validateEncodeParameters(point, level);
 
         // 计算高度编码的数学参数
@@ -138,7 +137,7 @@ public class BeiDouGridEncoder {
         // 计算高度编码的值
         int n = (int) Math.floor(
                 (theta0 / theta) *
-                        (Math.log((altitude + BeiDouGridConstants.EARTH_RADIUS) / BeiDouGridConstants.EARTH_RADIUS) / Math.log(1 + theta0 * (Math.PI / 180)))
+                        (Math.log((point.getAltitude() + BeiDouGridConstants.EARTH_RADIUS) / BeiDouGridConstants.EARTH_RADIUS) / Math.log(1 + theta0 * (Math.PI / 180)))
         );
 
         // 确定高度方向编码（0表示正，1表示负）
