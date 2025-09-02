@@ -140,7 +140,7 @@ public class BeiDouGridUtils {
      * 使用场景：
      * - 需要将父网格细化为更小粒度的子网格时（如地图分层展示、空间分析等）。
      *
-     * @param parentGrid 父网格编码（格式示例：NE12345678）
+     * @param parentGrid 父网格编码（格式示例：N50J475）
      *                  - 必须为有效的北斗二维网格码
      *                  - 编码级别需小于10（最高级网格无子网格）
      * @return 子网格集合（Set<String>）
@@ -153,7 +153,7 @@ public class BeiDouGridUtils {
      *
      * @see BeiDouGrid2DRangeQuery#generateChildGrids2D 二维子网格生成实现
      */
-    public static Set<String> getChild2DGrids(String parentGrid) {
+    public static Set<String> getChildGrids2D(String parentGrid) {
         return BeiDouGrid2DRangeQuery.generateChildGrids2D(parentGrid);
     }
 
@@ -167,7 +167,7 @@ public class BeiDouGridUtils {
      * 使用场景：
      * - 需要将父网格细化为更小粒度的子网格时（如三维空间分析、高度分层等）。
      *
-     * @param parentGrid 父网格编码（格式示例：NE123456789）
+     * @param parentGrid 父网格编码（格式示例：N050J0047050）
      *                  - 必须为有效的北斗三维网格码
      *                  - 编码级别需小于10（最高级网格无子网格）
      * @return 子网格集合（Set<String>）
@@ -180,7 +180,7 @@ public class BeiDouGridUtils {
      *
      * @see BeiDouGrid3DRangeQuery#generateChildGrids3D 三维子网格生成实现
      */
-    public static Set<String> getChild3DGrids(String parentGrid) {
+    public static Set<String> getChildGrids3D(String parentGrid) {
         return BeiDouGrid3DRangeQuery.generateChildGrids3D(parentGrid);
     }
 

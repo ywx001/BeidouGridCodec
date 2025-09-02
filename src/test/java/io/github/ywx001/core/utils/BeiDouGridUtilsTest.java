@@ -106,17 +106,17 @@ class BeiDouGridUtilsTest {
     }
 
     @Test
-    void testGetChild2DGrids() {
+    void testGetChildGrids2D() {
         String code2D = "N31A";
-        Set<String> result = BeiDouGridUtils.getChild2DGrids(code2D);
+        Set<String> result = BeiDouGridUtils.getChildGrids2D(code2D);
         log.info("生成子级2维网格码: {}", result);
         assertNotNull(result);
     }
 
     @Test
-    void testGetChild3DGrids() {
+    void testGetChildGrids3D() {
         String code3D = "N050J0047050";
-        Set<String> result = BeiDouGridUtils.getChild3DGrids(code3D);
+        Set<String> result = BeiDouGridUtils.getChildGrids3D(code3D);
         log.info("生成子级3维网格码: {}", result);
         assertNotNull(result);
     }

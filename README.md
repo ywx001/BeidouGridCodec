@@ -37,21 +37,29 @@
 ### 使用示例
 
 ```java
+import io.github.ywx001.core.utils.BeiDouGridUtils;
+
 // 二维编码
 GeoPoint point = GeoPoint.builder()
-    .latitude(31.2720680)
-    .longitude(120.637779)
-    .build();
-String code2D = BeiDouGridUtils.encode2D(point, 10);
+        .latitude(31.2720680)
+        .longitude(120.637779)
+        .build();
+        String code2D = BeiDouGridUtils.encode2D(point, 10);
 
-// 二维解码  
-GeoPoint decodedPoint = BeiDouGridUtils.decode2D(code2D);
+        // 二维解码  
+        GeoPoint decodedPoint = BeiDouGridUtils.decode2D(code2D);
 
-// 三维编码
-String code3D = BeiDouGridUtils.encode3D(point, 50, 10);
+        // 三维编码
+        String code3D = BeiDouGridUtils.encode3D(point, 50, 10);
 
-// 三维解码
-Map<String, Object> decoded3D = BeiDouGridUtils.decode3D(code3D);
+        // 三维解码
+        Map<String, Object> decoded3D = BeiDouGridUtils.decode3D(code3D);
+
+        // 获取二维子网格集合
+        Set<String> childGrids = BeiDouGridUtils.getChildGrids2D("N50J475");
+
+        // 获取三维子网格集合
+        Set<String> childGrids = BeiDouGridUtils.getChildGrids3D("N050J0047050");
 ```
 
 ## 空间查询
