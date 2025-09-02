@@ -124,6 +124,7 @@ public class BeiDouGridConstants {
     /**
      * 计算各级网格的长度
      * 根据赤道周长和各级网格的角度划分计算
+     *
      * @return 各级网格长度数组
      */
     private static double[] calculateGridSizes3D() {
@@ -136,31 +137,31 @@ public class BeiDouGridConstants {
         sizes[1] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * 4.0;
 
         // 第二级网格：30′
-        sizes[2] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (30.0/60.0);
+        sizes[2] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (30.0 / 60.0);
 
         // 第三级网格：15′
-        sizes[3] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (15.0/60.0);
+        sizes[3] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (15.0 / 60.0);
 
         // 第四级网格：1′
-        sizes[4] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (1.0/60.0);
+        sizes[4] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (1.0 / 60.0);
 
         // 第五级网格：4″
-        sizes[5] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (4.0/3600.0);
+        sizes[5] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (4.0 / 3600.0);
 
         // 第六级网格：2″
-        sizes[6] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (2.0/3600.0);
+        sizes[6] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (2.0 / 3600.0);
 
         // 第七级网格：1/4″
-        sizes[7] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (0.25/3600.0);
+        sizes[7] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (0.25 / 3600.0);
 
         // 第八级网格：1/32″
-        sizes[8] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (1.0/32.0/3600.0);
+        sizes[8] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (1.0 / 32.0 / 3600.0);
 
         // 第九级网格：1/256″
-        sizes[9] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (1.0/256.0/3600.0);
+        sizes[9] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (1.0 / 256.0 / 3600.0);
 
         // 第十级网格：1/2048″
-        sizes[10] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (1.0/2048.0/3600.0);
+        sizes[10] = EARTH_EQUATOR_CIRCUMFERENCE / 360.0 * (1.0 / 2048.0 / 3600.0);
 
         return sizes;
     }
@@ -219,10 +220,28 @@ public class BeiDouGridConstants {
     /**
      * 经度方向枚举
      */
-    public enum LngDirection {E, W}
+    public enum LngDirection {
+        /**
+         * 东经
+         */
+        E,
+        /**
+         * 西经
+         */
+        W
+    }
 
     /**
      * 纬度方向枚举
      */
-    public enum LatDirection {N, S}
+    public enum LatDirection {
+        /**
+         * 北纬
+         */
+        N,
+        /**
+         * 南纬
+         */
+        S
+    }
 }

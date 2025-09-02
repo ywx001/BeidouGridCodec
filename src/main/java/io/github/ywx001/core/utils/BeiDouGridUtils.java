@@ -143,7 +143,7 @@ public class BeiDouGridUtils {
      * @param parentGrid 父网格编码（格式示例：N50J475）
      *                  - 必须为有效的北斗二维网格码
      *                  - 编码级别需小于10（最高级网格无子网格）
-     * @return 子网格集合（Set<String>）
+     * @return 子网格集合（Set&lt;String&gt;）
      *         - 每个子网格的级别为父网格级别 + 1
      *         - 集合无序但保证唯一性
      *
@@ -170,7 +170,7 @@ public class BeiDouGridUtils {
      * @param parentGrid 父网格编码（格式示例：N050J0047050）
      *                  - 必须为有效的北斗三维网格码
      *                  - 编码级别需小于10（最高级网格无子网格）
-     * @return 子网格集合（Set<String>）
+     * @return 子网格集合（Set&lt;String&gt;）
      *         - 每个子网格的级别为父网格级别 + 1
      *         - 集合无序但保证唯一性
      *

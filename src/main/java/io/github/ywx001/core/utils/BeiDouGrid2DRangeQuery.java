@@ -331,13 +331,13 @@ public class BeiDouGrid2DRangeQuery {
      * 空间关系枚举
      */
     public enum SpatialRelation {
-        // 完全包含
+        /** 包含 */
         CONTAINS,
-        // 相交
+        /** 相交 */
         INTERSECTS,
-        // 完全在内部
+        /** 被包含 */
         WITHIN,
-        // 不相交
+        /** 不相交 */
         DISJOINT
     }
 
@@ -390,8 +390,11 @@ public class BeiDouGrid2DRangeQuery {
     }
 
     /**
-     * 纯数学方法判断网格与几何图形是否相交
-     * 完全避免JTS几何计算
+     * 判断网格编码与几何图形是否相交（数学计算）
+     *
+     * @param gridCode 网格编码
+     * @param geom 几何图形（多边形、线、点等）
+     * @return 如果相交返回 true，否则返回 false
      */
     public static boolean isGridIntersectsMath(String gridCode, Geometry geom) {
         return isGridIntersectsMath(gridCode, geom, geom.getEnvelopeInternal());

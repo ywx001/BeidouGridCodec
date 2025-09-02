@@ -72,21 +72,27 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import java.util.Set;
 
-// 创建查询几何图形（多边形示例）
-GeometryFactory geometryFactory = new GeometryFactory();
-Coordinate[] coordinates = new Coordinate[]{
-    new Coordinate(116.3974, 39.9093),
-    new Coordinate(116.4074, 39.9093), 
-    new Coordinate(116.4074, 39.9193),
-    new Coordinate(116.3974, 39.9193),
-    new Coordinate(116.3974, 39.9093) // 闭合多边形
-};
-Geometry queryPolygon = geometryFactory.createPolygon(coordinates);
+        // 创建查询几何图形（多边形示例）
+        GeometryFactory geometryFactory = new GeometryFactory();
+        Coordinate[] coordinates = new Coordinate[]{
+            new Coordinate(116.3974, 39.9093),
+            new Coordinate(116.4074, 39.9093), 
+            new Coordinate(116.4074, 39.9193),
+            new Coordinate(116.3974, 39.9193),
+            new Coordinate(116.3974, 39.9093) // 闭合多边形
+        };
+        Geometry queryPolygon = geometryFactory.createPolygon(coordinates);
 
-// 查找与多边形相交的6级网格码
-Set<String> gridCodes = BeiDouGridUtils.findIntersectingGridCodes(queryPolygon, 6);
+        // 查找网格码层级
+        int targetLevel = 8;
 
-// 输出结果示例: ["N39A123456", "N39A123457", "N39A123458"]
+        // 查找与多边形相交的8级二维网格码
+        Set<String> gridCodes2D = BeiDouGridUtils.find2DIntersectingGridCodes(queryPolygon, targetLevel);
+        // 输出结果示例: ["N50J47585D406770", "N50J475950514553", "N50J475950334665"]
+        
+        // 查询三维网格码
+        Set<String> gridCodes3D = BeiDouGridUtils.find3DIntersectingGridCodes(queryPolygon, targetLevel, 0, 100);
+        // 输出结果示例: ["N050J004705085080030200610", "N050J0047050850B5010550350", "N050J004705085072000130710"]
 ```
 
 **功能特点：**

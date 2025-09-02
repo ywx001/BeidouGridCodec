@@ -59,7 +59,13 @@ public class BeiDouGrid3DRangeQuery {
 
 
     /**
-     * 直接生成三维网格码（完全跳过二维网格码生成）
+     * 直接生成与几何图形相交的三维网格编码集合
+     *
+     * @param geom 几何图形
+     * @param targetLevel 目标网格级别
+     * @param minAltitude 最小高度
+     * @param maxAltitude 最大高度
+     * @return 相交的三维网格编码集合
      */
     public static Set<String> generate3DGridCodesDirectly(Geometry geom, int targetLevel,
                                                           double minAltitude, double maxAltitude) {
@@ -363,7 +369,10 @@ public class BeiDouGrid3DRangeQuery {
     }
 
     /**
-     * 从几何图形中提取所有高度点
+     * 从几何图形中提取高度点集合
+     *
+     * @param geom 几何图形
+     * @return 高度点集合
      */
     public static Set<Double> extractAltitudePointsFromGeometry(Geometry geom) {
         if (geom == null) {
