@@ -385,7 +385,7 @@ public class BeiDouGrid3DRangeQuery {
             double gridMaxAlt = gridMinAlt + gridHeight;
 
             // 生成高度编码
-            String heightCode = BeiDouGridEncoder.encode3DAltitude(gridMinAlt + gridHeight / 2, level);
+            String heightCode = BeiDouGridEncoder.encode3DHeight(gridMinAlt + gridHeight / 2, level);
 
             // 组合成完整的三维编码
             String grid3D = combine2DAndHeight(grid2D, heightCode, level);

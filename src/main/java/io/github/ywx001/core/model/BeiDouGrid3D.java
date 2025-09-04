@@ -3,12 +3,10 @@ package io.github.ywx001.core.model;
 import io.github.ywx001.core.constants.BeiDouGridConstants;
 import io.github.ywx001.core.utils.BeiDouGridUtils;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class BeiDouGrid3D extends BeiDouGrid2D{
