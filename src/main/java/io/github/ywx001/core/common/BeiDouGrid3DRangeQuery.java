@@ -4,15 +4,14 @@ import io.github.ywx001.core.constants.BeiDouGridConstants;
 import io.github.ywx001.core.decoder.BeiDouGridDecoder;
 import io.github.ywx001.core.model.BeiDouGeoPoint;
 import io.github.ywx001.core.utils.BeiDouGridUtils;
+import io.github.ywx001.core.utils.GisUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Envelope;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -31,15 +30,15 @@ public class BeiDouGrid3DRangeQuery {
      *
      * @param geom        几何图形对象，支持多边形、线、点等JTS几何类型
      * @param targetLevel 目标网格级别，范围1-10
-     * @param minAltitude 最小海拔高度（单位：米）
-     * @param maxAltitude 最大海拔高度（单位：米）
+     * @param minHeight 最小海拔高度（单位：米）
+     * @param maxHeight 最大海拔高度（单位：米）
      * @return 与几何图形相交的所有指定级别三维网格码集合
      * @throws IllegalArgumentException 如果几何图形为空、目标级别不在 1-10 范围内或高度范围无效
      */
     public static Set<String> find3DGridCodesInRange(Geometry geom, int targetLevel,
-                                                     double minAltitude, double maxAltitude) {
+                                                     double minHeight, double maxHeight) {
         long startTime = System.currentTimeMillis();
-        validateParameters(geom, targetLevel, minAltitude, maxAltitude);
+        validateParameters(geom, targetLevel, minHeight, maxHeight);
 
         Set<String> result = new HashSet<>();
 
@@ -50,7 +49,7 @@ public class BeiDouGrid3DRangeQuery {
 
         // 第二阶段：为每个基础网格生成三维编码并筛选
         for (String grid2D : baseGrids) {
-            generate3DGridsFor2DBase(grid2D, geom, minAltitude, maxAltitude, result);
+            generate3DGridsFor2DBase(grid2D, geom, minHeight, maxHeight, result);
         }
         totalTime = System.currentTimeMillis() - startTime;
         log.debug("三维查询完成：找到 {} 个{}级三维网格，总耗时 {}ms", result.size(), targetLevel, totalTime);
@@ -60,27 +59,58 @@ public class BeiDouGrid3DRangeQuery {
 
 
     /**
+     * 对于为线的几何图形，该方法性能优于find3DGridCodesInRange方法，首选该方法
+     * @param lineString 线
+     * @param targetLevel 所生成的网格等级
+     * @return 线所包含的网格点
+     */
+    public List<BeiDouGeoPoint> find3DGridCodesWithLineString(LineString lineString, int targetLevel) {
+        //获取被点填充好的线
+        Geometry newGeom = GisUtils.lineFillPoints(lineString, BeiDouGridConstants.GRID_SIZES_3D[targetLevel]);
+        Coordinate[] coordinates = newGeom.getCoordinates();
+        List<BeiDouGeoPoint> result = new ArrayList<>();
+        for (Coordinate coordinate : coordinates) {
+            //
+            String code = BeiDouGridUtils.encode3D(new BeiDouGeoPoint(coordinate.x, coordinate.y, coordinate.z), targetLevel);
+            BeiDouGeoPoint beiDouGeoPoint = new BeiDouGridDecoder().decode3D(code);
+            if (result.size() > 1) {
+                double lastGridLng = result.get(result.size() - 1).getLongitude();
+                double lastGridLat = result.get(result.size() - 1).getLatitude();
+                double lastGridHeight = result.get(result.size() - 1).getHeight();
+
+                BeiDouGeoPoint lastBeiDouGeoPoint = new BeiDouGeoPoint(lastGridLng, lastGridLat, lastGridHeight);
+                if (!beiDouGeoPoint.equals(lastBeiDouGeoPoint)){
+                    result.add(beiDouGeoPoint);
+                }
+            } else {
+                result.add(beiDouGeoPoint);
+            }
+        }
+        return result;
+    }
+
+    /**
      * 直接生成与几何图形相交的三维网格编码集合
      *
      * @param geom 几何图形
      * @param targetLevel 目标网格级别
-     * @param minAltitude 最小高度
-     * @param maxAltitude 最大高度
+     * @param minHeight 最小高度
+     * @param maxHeight 最大高度
      * @return 相交的三维网格编码集合
      */
     public static Set<String> generate3DGridCodesDirectly(Geometry geom, int targetLevel,
-                                                          double minAltitude, double maxAltitude) {
+                                                          double minHeight, double maxHeight) {
         long startTime = System.currentTimeMillis();
-        validateParameters(geom, targetLevel, minAltitude, maxAltitude);
+        validateParameters(geom, targetLevel, minHeight, maxHeight);
 
         Set<String> result = new HashSet<>();
 
         // 1. 快速筛选一级三维网格（包含高度范围）
-        Set<String> level1Grids = findIntersectingLevel1Grids3D(geom, minAltitude, maxAltitude);
+        Set<String> level1Grids = findIntersectingLevel1Grids3D(geom, minHeight, maxHeight);
 
         // 2. 对每个相交的一级网格进行递归细化
         level1Grids.parallelStream().forEach(level1Grid ->
-                refineGrid3D(level1Grid, geom, targetLevel, 1, minAltitude, maxAltitude, result)
+                refineGrid3D(level1Grid, geom, targetLevel, 1, minHeight, maxHeight, result)
         );
 
         long totalTime = System.currentTimeMillis() - startTime;
@@ -93,7 +123,7 @@ public class BeiDouGrid3DRangeQuery {
      * 快速筛选一级三维网格（包含高度范围）
      */
     private static Set<String> findIntersectingLevel1Grids3D(Geometry geom,
-                                                             double minAltitude, double maxAltitude) {
+                                                             double minHeight, double maxHeight) {
         // 1. 计算几何图形的边界范围（包括高度）
         Envelope envelope = geom.getEnvelopeInternal();
         double minLng = envelope.getMinX();
@@ -106,8 +136,8 @@ public class BeiDouGrid3DRangeQuery {
         int maxLngIdx = (int) Math.floor(maxLng / 6.0);
         int minLatIdx = (int) Math.floor(minLat / 4.0);
         int maxLatIdx = (int) Math.floor(maxLat / 4.0);
-        int minAltIdx = (int) Math.floor(minAltitude / getGridHeight3D(1));
-        int maxAltIdx = (int) Math.floor(maxAltitude / getGridHeight3D(1));
+        int minAltIdx = (int) Math.floor(minHeight / getGridHeight3D(1));
+        int maxAltIdx = (int) Math.floor(maxHeight / getGridHeight3D(1));
 
         // 3. 生成候选一级网格码
         Set<String> candidateGrids = new HashSet<>();
@@ -124,7 +154,7 @@ public class BeiDouGrid3DRangeQuery {
         // 4. 精确筛选：判断几何图形是否与网格相交（包括高度范围）
         Set<String> intersectingGrids = new HashSet<>();
         for (String grid3D : candidateGrids) {
-            if (is3DGridValidDirectly(grid3D, geom, minAltitude, maxAltitude)) {
+            if (is3DGridValidDirectly(grid3D, geom, minHeight, maxHeight)) {
                 intersectingGrids.add(grid3D);
             }
         }
@@ -141,17 +171,17 @@ public class BeiDouGrid3DRangeQuery {
                 new BeiDouGeoPoint(lngIdx * 6.0 + 3.0, latIdx * 4.0 + 2.0, 0), 1);
 
         // 生成高度部分
-        String altitudeCode = BeiDouGridUtils.encode3DAltitude(altIdx * getGridHeight3D(1) + getGridHeight3D(1) / 2, 1);
+        String heightCode = BeiDouGridUtils.encode3DHeight(altIdx * getGridHeight3D(1) + getGridHeight3D(1) / 2, 1);
 
         // 组合成完整的三维编码
-        return combine2DAndAltitude(grid2D, altitudeCode, 1);
+        return combine2DAndHeight(grid2D, heightCode, 1);
     }
 
     /**
      * 递归细化三维网格
      */
     private static void refineGrid3D(String parentGrid, Geometry geom, int targetLevel,
-                                     int currentLevel, double minAltitude, double maxAltitude,
+                                     int currentLevel, double minHeight, double maxHeight,
                                      Set<String> result) {
         if (currentLevel == targetLevel) {
             result.add(parentGrid);
@@ -165,9 +195,9 @@ public class BeiDouGrid3DRangeQuery {
         log.debug("生成子网格数量: " + childGrids.size());
         int validCount = 0;
         for (String childGrid : childGrids) {
-            if (is3DGridValidDirectly(childGrid, geom, minAltitude, maxAltitude)) {
+            if (is3DGridValidDirectly(childGrid, geom, minHeight, maxHeight)) {
                 refineGrid3D(childGrid, geom, targetLevel, currentLevel + 1,
-                        minAltitude, maxAltitude, result);
+                        minHeight, maxHeight, result);
                 validCount++;
             }
         }
@@ -203,12 +233,11 @@ public class BeiDouGrid3DRangeQuery {
         }
 
         // 解码父网格获取西南角点（包括高度）
-        Map<String, Object> decoded = BeiDouGridUtils.decode3D(parentGrid);
-        BeiDouGeoPoint parentSWCorner = (BeiDouGeoPoint) decoded.get("geoPoint");
+        BeiDouGeoPoint parentSWCorner = BeiDouGridUtils.decode3D(parentGrid);
         double parentSWCornerLatitude = parentSWCorner.getLatitude();
         double parentSWCornerLongitude = parentSWCorner.getLongitude();
-        double parentMinAltitude = parentSWCorner.getAltitude();
-        double parentMaxAltitude = parentSWCorner.getAltitude() + getGridHeight3D(currentLevel);
+        double parentMinHeight = parentSWCorner.getHeight();
+        double parentMaxHeight = parentSWCorner.getHeight() + getGridHeight3D(currentLevel);
 
 
         // 获取子网格的划分数量
@@ -225,8 +254,8 @@ public class BeiDouGrid3DRangeQuery {
         double altSize = getGridHeight3D(currentLevel + 1);
 
         // 计算高度方向的网格数量
-        int minAltIdx = (int) Math.floor(parentMinAltitude / altSize);
-        int maxAltIdx = (int) Math.ceil(parentMaxAltitude / altSize);
+        int minAltIdx = (int) Math.floor(parentMinHeight / altSize);
+        int maxAltIdx = (int) Math.ceil(parentMaxHeight / altSize);
         log.debug("高度方向网格数量: minAltIdx={}, maxAltIdx={}, 总数量={}", minAltIdx, maxAltIdx, maxAltIdx - minAltIdx + 1);
 
         // 生成所有子网格的中心点并编码（高度方向生成多个网格）
@@ -263,17 +292,16 @@ public class BeiDouGrid3DRangeQuery {
                                                  double gridMinAlt, double gridMaxAlt) {
         try {
             // 解码获取网格边界
-            Map<String, Object> decoded = BeiDouGridUtils.decode3D(grid3D);
-            BeiDouGeoPoint swPoint = (BeiDouGeoPoint) decoded.get("geoPoint");
+            BeiDouGeoPoint swPoint = BeiDouGridUtils.decode3D(grid3D);
 
             // 获取网格的尺寸（经度、纬度、高度）
             double gridHeight = getGridHeight3D(getGridLevel3D(grid3D));
 
             // 计算网格的东北角点（右上角点）
-            double neAlt = swPoint.getAltitude() + gridHeight;
+            double neAlt = swPoint.getHeight() + gridHeight;
 
             // 高度范围验证
-            if (gridMaxAlt < swPoint.getAltitude() || gridMinAlt > neAlt) {
+            if (gridMaxAlt < swPoint.getHeight() || gridMinAlt > neAlt) {
                 return false;
             }
 
@@ -289,18 +317,18 @@ public class BeiDouGrid3DRangeQuery {
     }
 
 
-    private static void validateParameters(Geometry geom, int targetLevel, double minAltitude, double maxAltitude) {
+    private static void validateParameters(Geometry geom, int targetLevel, double minHeight, double maxHeight) {
         if (geom == null) {
             throw new IllegalArgumentException("几何图形不能为空");
         }
         if (targetLevel < 1 || targetLevel > 10) {
             throw new IllegalArgumentException("目标层级必须在1到10之间");
         }
-        if (Double.isNaN(minAltitude) || Double.isNaN(maxAltitude) ||
-                Double.isInfinite(minAltitude) || Double.isInfinite(maxAltitude)) {
+        if (Double.isNaN(minHeight) || Double.isNaN(maxHeight) ||
+                Double.isInfinite(minHeight) || Double.isInfinite(maxHeight)) {
             throw new IllegalArgumentException("高度范围必须是有效的数值");
         }
-        if (minAltitude > maxAltitude) {
+        if (minHeight > maxHeight) {
             throw new IllegalArgumentException("最小高度不能大于最大高度");
         }
     }
@@ -310,36 +338,36 @@ public class BeiDouGrid3DRangeQuery {
      */
     public static Set<String> find3DGridCodesInRange(Geometry geom, int targetLevel) {
         // 从几何图形中提取高度范围
-        double[] altitudeRange = extractAltitudeRangeFromGeometry(geom);
-        return find3DGridCodesInRange(geom, targetLevel, altitudeRange[0], altitudeRange[1]);
+        double[] heightRange = extractHeightRangeFromGeometry(geom);
+        return find3DGridCodesInRange(geom, targetLevel, heightRange[0], heightRange[1]);
     }
 
     /**
      * 从几何图形中提取高度范围
      */
-    private static double[] extractAltitudeRangeFromGeometry(Geometry geom) {
+    private static double[] extractHeightRangeFromGeometry(Geometry geom) {
         if (geom == null) {
             throw new IllegalArgumentException("几何图形不能为空");
         }
 
-        double minAltitude = Double.MAX_VALUE;
-        double maxAltitude = Double.MIN_VALUE;
+        double minHeight = Double.MAX_VALUE;
+        double maxHeight = Double.MIN_VALUE;
 
         // 遍历几何图形的所有点，提取高度信息
         for (Coordinate coord : geom.getCoordinates()) {
-            double altitude = Double.isNaN(coord.z) ? 0.0 : coord.z;
-            minAltitude = Math.min(minAltitude, altitude);
-            maxAltitude = Math.max(maxAltitude, altitude);
+            double height = Double.isNaN(coord.z) ? 0.0 : coord.z;
+            minHeight = Math.min(minHeight, height);
+            maxHeight = Math.max(maxHeight, height);
         }
 
-        return new double[]{minAltitude, maxAltitude};
+        return new double[]{minHeight, maxHeight};
     }
 
     /**
      * 为二维基础网格生成三维编码并筛选（带高度参数，以高度字段为范围）
      */
     private static void generate3DGridsFor2DBase(String grid2D, Geometry geom,
-                                                 double minAltitude, double maxAltitude,
+                                                 double minHeight, double maxHeight,
                                                  Set<String> result) {
         int level = getGridLevel(grid2D);
 
@@ -347,8 +375,8 @@ public class BeiDouGrid3DRangeQuery {
         double gridHeight = getGridHeight3D(level);
 
         // 计算起始和结束的高度索引
-        int startIndex = (int) Math.floor(minAltitude / gridHeight);
-        int endIndex = (int) Math.ceil(maxAltitude / gridHeight);
+        int startIndex = (int) Math.floor(minHeight / gridHeight);
+        int endIndex = (int) Math.ceil(maxHeight / gridHeight);
 
         // 为每个高度索引生成编码
         for (int i = startIndex; i <= endIndex; i++) {
@@ -356,10 +384,10 @@ public class BeiDouGrid3DRangeQuery {
             double gridMaxAlt = gridMinAlt + gridHeight;
 
             // 生成高度编码
-            String altitudeCode = BeiDouGridUtils.encode3DAltitude(gridMinAlt + gridHeight / 2, level);
+            String heightCode = BeiDouGridUtils.encode3DHeight(gridMinAlt + gridHeight / 2, level);
 
             // 组合成完整的三维编码
-            String grid3D = combine2DAndAltitude(grid2D, altitudeCode, level);
+            String grid3D = combine2DAndHeight(grid2D, heightCode, level);
 
             // 检查是否与几何图形相交
 //            if (is3DGridValid(grid3D, geom, gridMinAlt, gridMaxAlt)) {
@@ -375,37 +403,37 @@ public class BeiDouGrid3DRangeQuery {
      * @param geom 几何图形
      * @return 高度点集合
      */
-    public static Set<Double> extractAltitudePointsFromGeometry(Geometry geom) {
+    public static Set<Double> extractHeightPointsFromGeometry(Geometry geom) {
         if (geom == null) {
             throw new IllegalArgumentException("几何图形不能为空");
         }
 
-        Set<Double> altitudePoints = new HashSet<>();
+        Set<Double> heightPoints = new HashSet<>();
 
         // 遍历几何图形的所有点，提取高度信息
         for (Coordinate coord : geom.getCoordinates()) {
             // 假设 Coordinate 的 z 值代表高度
-            double altitude = Double.isNaN(coord.z) ? 0.0 : coord.z;
-            altitudePoints.add(altitude);
+            double height = Double.isNaN(coord.z) ? 0.0 : coord.z;
+            heightPoints.add(height);
         }
 
-        return altitudePoints;
+        return heightPoints;
     }
 
     /**
      * 组合二维编码和高度编码
      */
-    private static String combine2DAndAltitude(String grid2D, String altitudeCode, int level) {
+    private static String combine2DAndHeight(String grid2D, String heightCode, int level) {
         StringBuilder result = new StringBuilder();
 
         // 添加纬度方向
         result.append(grid2D.charAt(0));
 
         // 添加高度方向
-        result.append(altitudeCode.charAt(0));
+        result.append(heightCode.charAt(0));
 
         int grid2DIndex = 1;
-        int altitudeCodeIndex = 1;
+        int heightCodeIndex = 1;
 
         // 逐级组合编码
         for (int i = 1; i <= level; i++) {
@@ -417,11 +445,11 @@ public class BeiDouGrid3DRangeQuery {
 
             // 添加高度编码片段
             if (i == 1) {
-                result.append(altitudeCode, altitudeCodeIndex, altitudeCodeIndex + 2);
-                altitudeCodeIndex += 2;
+                result.append(heightCode, heightCodeIndex, heightCodeIndex + 2);
+                heightCodeIndex += 2;
             } else {
-                result.append(altitudeCode, altitudeCodeIndex, altitudeCodeIndex + 1);
-                altitudeCodeIndex += 1;
+                result.append(heightCode, heightCodeIndex, heightCodeIndex + 1);
+                heightCodeIndex += 1;
             }
         }
 
@@ -434,16 +462,15 @@ public class BeiDouGrid3DRangeQuery {
     private static boolean is3DGridValid(String grid3D, Geometry geom, double queryMinAlt, double queryMaxAlt) {
         try {
             // 解码获取网格的三维边界信息
-            Map<String, Object> decoded = BeiDouGridUtils.decode3D(grid3D);
-            BeiDouGeoPoint swPoint = (BeiDouGeoPoint) decoded.get("geoPoint");
+            BeiDouGeoPoint swPoint = BeiDouGridUtils.decode3D(grid3D);
             int level = getGridLevel3D(grid3D);
 
             // 获取网格的尺寸
-            double gridAltitudeSize = getGridHeight3D(level);
+            double gridHeightSize = getGridHeight3D(level);
 
             // 计算网格的高度范围
-            double gridMinAlt = swPoint.getAltitude();
-            double gridMaxAlt = gridMinAlt + gridAltitudeSize;
+            double gridMinAlt = swPoint.getHeight();
+            double gridMaxAlt = gridMinAlt + gridHeightSize;
 
             // 1. 高度范围相交判断（精确匹配）
             boolean heightIntersects = (gridMaxAlt > queryMinAlt) && (gridMinAlt < queryMaxAlt);
@@ -531,7 +558,6 @@ public class BeiDouGrid3DRangeQuery {
         }
         throw new IllegalArgumentException("无效的三维网格码格式: " + grid3D);
     }
-
     /**
      * 创建网格边界几何图形
      */

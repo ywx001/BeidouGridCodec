@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * 北斗网格范围查询工具测试类
  */
 @Slf4j
-class BeiDouGrid2DRangeQueryTest {
+class BeiDouGrid2D2DRangeQueryTest {
 
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
 

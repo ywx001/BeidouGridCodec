@@ -11,7 +11,6 @@ import io.github.ywx001.core.model.BeiDouGeoPoint;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Geometry;
 
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -80,12 +79,12 @@ public class BeiDouGridUtils {
     /**
      * 对高度部分进行三维编码
      *
-     * @param altitude 高度（单位：米）
+     * @param height 高度（单位：米）
      * @param level    要编码到第几级
      * @return 北斗三维网格位置码的高度部分
      */
-    public static String encode3DAltitude(double altitude, Integer level) {
-        return encoder.encode3DAltitude(altitude, level);
+    public static String encode3DHeight(double height, Integer level) {
+        return encoder.encode3DHeight(height, level);
     }
 
     /**
@@ -117,7 +116,7 @@ public class BeiDouGridUtils {
      * @return 经纬度坐标和高度信息
      * @throws IllegalArgumentException 如果位置码格式无效
      */
-    public static Map<String, Object> decode3D(String code) {
+    public static BeiDouGeoPoint decode3D(String code) {
         return decoder.decode3D(code);
     }
 
@@ -211,14 +210,14 @@ public class BeiDouGridUtils {
      *
      * @param geometry    几何图形对象（支持点、线、多边形等JTS几何类型）
      * @param targetLevel 目标网格级别（1-10）
-     * @param minAltitude 最小海拔高度（单位：米）
-     * @param maxAltitude 最大海拔高度（单位：米）
+     * @param minHeight 最小海拔高度（单位：米）
+     * @param maxHeight 最大海拔高度（单位：米）
      * @return 与几何图形相交的所有指定级别三维网格码集合
      * @throws IllegalArgumentException 如果参数不合法（几何图形为空、级别越界或高度范围无效）
      * @see BeiDouGrid3DRangeQuery#find3DGridCodesInRange 实际执行三维查询的方法
      */
-    public static Set<String> find3DIntersectingGridCodes(Geometry geometry, int targetLevel, double minAltitude, double maxAltitude) {
-        return BeiDouGrid3DRangeQuery.find3DGridCodesInRange(geometry, targetLevel, minAltitude, maxAltitude);
+    public static Set<String> find3DIntersectingGridCodes(Geometry geometry, int targetLevel, double minHeight, double maxHeight) {
+        return BeiDouGrid3DRangeQuery.find3DGridCodesInRange(geometry, targetLevel, minHeight, maxHeight);
     }
 
 }

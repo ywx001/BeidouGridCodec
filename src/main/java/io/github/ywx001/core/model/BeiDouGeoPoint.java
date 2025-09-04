@@ -26,9 +26,9 @@ public class BeiDouGeoPoint {
     private double latitude;
 
     /**
-     * 高度，单位：米
+     * 大地高，单位：米
      */
-    private double altitude;
+    private double height;
 
     /**
      * 验证经纬度是否在有效范围内
@@ -63,8 +63,8 @@ public class BeiDouGeoPoint {
         double distance = R * c;
 
         // 考虑高度差
-        if (this.altitude != 0 || other.altitude != 0) {
-            double heightDiff = this.altitude - other.altitude;
+        if (this.height != 0 || other.height != 0) {
+            double heightDiff = this.height - other.height;
             distance = Math.sqrt(distance * distance + heightDiff * heightDiff);
         }
 
@@ -78,6 +78,19 @@ public class BeiDouGeoPoint {
     @Override
     public String toString() {
         return String.format("GeoPoint(经度=%.6f°, 纬度=%.6f°, 高度=%.2f米)",
-                             longitude, latitude, altitude);
+                             longitude, latitude, height);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null){
+            return false;
+        }
+        if (!(obj instanceof BeiDouGeoPoint other)){
+            return false;
+        }
+        return this.longitude == other.longitude &&
+                this.latitude == other.latitude &&
+                this.height == other.height;
     }
 }

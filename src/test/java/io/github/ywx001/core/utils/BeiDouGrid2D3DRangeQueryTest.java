@@ -14,11 +14,11 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
-class BeiDouGrid3DRangeQueryTest {
+class BeiDouGrid2D3DRangeQueryTest {
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Test
-    void testFind3DGridCodesInRangeWithExplicitAltitude() {
+    void testFind3DGridCodesInRangeWithExplicitHeight() {
         // 创建一个简单的矩形几何图形（包含高度数据）
         Coordinate[] coordinates = new Coordinate[]{
                 new Coordinate(116.391, 39.913, 100),
@@ -39,7 +39,7 @@ class BeiDouGrid3DRangeQueryTest {
     }
 
     @Test
-    void testFind3DGridCodesInRangeWithAutoAltitude() {
+    void testFind3DGridCodesInRangeWithAutoHeight() {
         // 创建一个简单的矩形几何图形（包含高度数据）
         Coordinate[] coordinates = new Coordinate[]{
                 new Coordinate(116.3, 39.9, 100),
@@ -78,7 +78,7 @@ class BeiDouGrid3DRangeQueryTest {
     }
 
     @Test
-    void testExtractAltitudePointsFromGeometry() {
+    void testExtractHeightPointsFromGeometry() {
         // 创建一个包含多个高度点的几何图形
         Coordinate[] coordinates = new Coordinate[]{
                 new Coordinate(116.3, 39.9, 100),
@@ -88,10 +88,10 @@ class BeiDouGrid3DRangeQueryTest {
         };
         Geometry geom = GEOMETRY_FACTORY.createLineString(coordinates);
 
-        Set<Double> altitudes = BeiDouGrid3DRangeQuery.extractAltitudePointsFromGeometry(geom);
-        assertEquals(3, altitudes.size()); // 去重后的高度点数量
-        assertTrue(altitudes.contains(100.0));
-        assertTrue(altitudes.contains(120.0));
-        assertTrue(altitudes.contains(150.0));
+        Set<Double> heights = BeiDouGrid3DRangeQuery.extractHeightPointsFromGeometry(geom);
+        assertEquals(3, heights.size()); // 去重后的高度点数量
+        assertTrue(heights.contains(100.0));
+        assertTrue(heights.contains(120.0));
+        assertTrue(heights.contains(150.0));
     }
 }

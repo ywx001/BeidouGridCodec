@@ -91,11 +91,11 @@ public class BeiDouGridEncoder {
     /**
      * 对一个经纬度坐标和高度进行三维编码（高度部分）
      *
-     * @param altitude 高度（单位：米）
+     * @param height 高度（单位：米）
      * @param level    要编码到第几级
      * @return 北斗三维网格位置码的高度部分
      */
-    public String encode3DAltitude(double altitude, Integer level) {
+    public String encode3DHeight(double height, Integer level) {
         if (level == null || level < 1 || level > 10) {
             throw new IllegalArgumentException("编码级别必须在1-10之间");
         }
@@ -107,7 +107,7 @@ public class BeiDouGridEncoder {
         // 计算高度编码的值
         int n = (int) Math.floor(
                 (theta0 / theta) *
-                        (Math.log((altitude + BeiDouGridConstants.EARTH_RADIUS) / BeiDouGridConstants.EARTH_RADIUS) / Math.log(1 + theta0 * (Math.PI / 180)))
+                        (Math.log((height + BeiDouGridConstants.EARTH_RADIUS) / BeiDouGridConstants.EARTH_RADIUS) / Math.log(1 + theta0 * (Math.PI / 180)))
         );
 
         // 确定高度方向编码（0表示正，1表示负）
@@ -118,7 +118,7 @@ public class BeiDouGridEncoder {
         StringBuilder binaryString = buildBinaryString(n, signCode);
 
         // 构建高度编码结果
-        return buildAltitudeCode(binaryString, level, signCode);
+        return buildHeightCode(binaryString, level, signCode);
     }
 
     /**
@@ -138,7 +138,7 @@ public class BeiDouGridEncoder {
         // 计算高度编码的值
         int n = (int) Math.floor(
                 (theta0 / theta) *
-                        (Math.log((point.getAltitude() + BeiDouGridConstants.EARTH_RADIUS) / BeiDouGridConstants.EARTH_RADIUS) / Math.log(1 + theta0 * (Math.PI / 180)))
+                        (Math.log((point.getHeight() + BeiDouGridConstants.EARTH_RADIUS) / BeiDouGridConstants.EARTH_RADIUS) / Math.log(1 + theta0 * (Math.PI / 180)))
         );
 
         // 确定高度方向编码（0表示正，1表示负）
@@ -369,9 +369,9 @@ public class BeiDouGridEncoder {
     /**
      * 构建高度编码
      */
-    private String buildAltitudeCode(StringBuilder binaryString, int level, String signCode) {
-        StringBuilder altitudeCode = new StringBuilder();
-        altitudeCode.append(signCode); // 高度方向位
+    private String buildHeightCode(StringBuilder binaryString, int level, String signCode) {
+        StringBuilder heightCode = new StringBuilder();
+        heightCode.append(signCode); // 高度方向位
 
         int binaryIndex = 1; // 跳过高度方向位
 
@@ -392,10 +392,10 @@ public class BeiDouGridEncoder {
                 codeStr = String.format("%2s", codeStr).replace(' ', '0');
             }
 
-            altitudeCode.append(codeStr);
+            heightCode.append(codeStr);
             binaryIndex += bits;
         }
 
-        return altitudeCode.toString();
+        return heightCode.toString();
     }
 }

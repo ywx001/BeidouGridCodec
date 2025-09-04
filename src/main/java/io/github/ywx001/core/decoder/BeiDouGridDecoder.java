@@ -58,22 +58,20 @@ public class BeiDouGridDecoder {
      * @param code 三维网格编码
      * @return 包含地理点和高度信息的 Map
      */
-    public Map<String, Object> decode3D(String code) {
+    public BeiDouGeoPoint decode3D(String code) {
         if (code == null || code.isEmpty()) {
             throw new IllegalArgumentException("位置码不能为空");
         }
 
         int level = getCodeLevel3D(code);
-        Map<String, Object> result = new HashMap<>();
 
         String code2D = extract2DCode(code, level);
         BeiDouGeoPoint beiDouGeoPoint = decode2D(code2D);
-        double altitude = decode3DAltitude(code, level);
+        double height = decode3DHeight(code, level);
 
-        beiDouGeoPoint.setAltitude(altitude);
-        result.put("geoPoint", beiDouGeoPoint);
+        beiDouGeoPoint.setHeight(height);
 
-        return result;
+        return beiDouGeoPoint;
     }
 
     /**
@@ -348,9 +346,9 @@ public class BeiDouGridDecoder {
     /**
      * 从三维编码中解码高度信息（网格底平面高度）
      */
-    private double decode3DAltitude(String code, int level) {
-        int altitudeSign = code.charAt(1) == '0' ? 1 : -1;
-        double altitude = 0;
+    private double decode3DHeight(String code, int level) {
+        int heightSign = code.charAt(1) == '0' ? 1 : -1;
+        double height = 0;
         int codeIndex = 2;
 
         for (int i = 1; i <= level; i++) {
@@ -358,22 +356,22 @@ public class BeiDouGridDecoder {
             codeIndex += level2DLength;
 
             if (i == 1) {
-                int altitudeIndex = Integer.parseInt(code.substring(codeIndex, codeIndex + 2));
-                altitude += altitudeIndex * BeiDouGridConstants.GRID_SIZES_3D[i];
+                int heightIndex = Integer.parseInt(code.substring(codeIndex, codeIndex + 2));
+                height += heightIndex * BeiDouGridConstants.GRID_SIZES_3D[i];
                 codeIndex += 2;
             } else {
-                int altitudeIndex;
+                int heightIndex;
                 if (i == 4 || i == 5) {
-                    altitudeIndex = Integer.parseInt(code.substring(codeIndex, codeIndex + 1), 16);
+                    heightIndex = Integer.parseInt(code.substring(codeIndex, codeIndex + 1), 16);
                 } else {
-                    altitudeIndex = Integer.parseInt(code.substring(codeIndex, codeIndex + 1));
+                    heightIndex = Integer.parseInt(code.substring(codeIndex, codeIndex + 1));
                 }
-                altitude += altitudeIndex * BeiDouGridConstants.GRID_SIZES_3D[i];
+                height += heightIndex * BeiDouGridConstants.GRID_SIZES_3D[i];
                 codeIndex += 1;
             }
         }
 
-        return altitude * altitudeSign;
+        return height * heightSign;
     }
 
     /**
