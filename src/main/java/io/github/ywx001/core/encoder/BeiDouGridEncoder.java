@@ -28,7 +28,7 @@ public class BeiDouGridEncoder {
      * @param level 要编码到第几级，范围1-10
      * @return 北斗二维网格位置码
      */
-    public String encode2D(BeiDouGeoPoint point, Integer level) {
+    public static String encode2D(BeiDouGeoPoint point, Integer level) {
         validateEncodeParameters(point, level);
 
         // 记录第n级网格的定位角点经纬度
@@ -95,7 +95,7 @@ public class BeiDouGridEncoder {
      * @param level    要编码到第几级
      * @return 北斗三维网格位置码的高度部分
      */
-    public String encode3DAltitude(double altitude, Integer level) {
+    public static String encode3DAltitude(double altitude, Integer level) {
         if (level == null || level < 1 || level > 10) {
             throw new IllegalArgumentException("编码级别必须在1-10之间");
         }
@@ -128,7 +128,7 @@ public class BeiDouGridEncoder {
      * @param level    要编码到第几级
      * @return 北斗三维网格位置码
      */
-    public String encode3D(BeiDouGeoPoint point, Integer level) {
+    public static String encode3D(BeiDouGeoPoint point, Integer level) {
         validateEncodeParameters(point, level);
 
         // 计算高度编码的数学参数
@@ -230,7 +230,7 @@ public class BeiDouGridEncoder {
     /**
      * 验证编码参数
      */
-    private void validateEncodeParameters(BeiDouGeoPoint point, Integer level) {
+    private static void validateEncodeParameters(BeiDouGeoPoint point, Integer level) {
         if (point == null) {
             throw new IllegalArgumentException("坐标点不能为空");
         }
@@ -243,7 +243,7 @@ public class BeiDouGridEncoder {
     /**
      * 生成指定层级的编码片段
      */
-    private String encodeFragment(int level, int lngCount, int latCount, String hemisphere) {
+    private static String encodeFragment(int level, int lngCount, int latCount, String hemisphere) {
         return switch (level) {
             case 1 -> encodeLevel1(lngCount, latCount);
             case 2 -> encodeLevel2(lngCount, latCount, hemisphere);
@@ -258,14 +258,14 @@ public class BeiDouGridEncoder {
     /**
      * 一级网格编码（标准图2）
      */
-    private String encodeLevel1(int lngCount, int latCount) {
+    private static String encodeLevel1(int lngCount, int latCount) {
         return String.format("%02d", lngCount) + (char) ('A' + latCount);
     }
 
     /**
      * 二级网格编码（标准图3）
      */
-    private String encodeLevel2(int lngCount, int latCount, String hemisphere) {
+    private static String encodeLevel2(int lngCount, int latCount, String hemisphere) {
         int[] adjusted = adjustCounts(lngCount, latCount, hemisphere, 11, 7);
         return toHexPair(adjusted[0], adjusted[1]);
     }
@@ -273,7 +273,7 @@ public class BeiDouGridEncoder {
     /**
      * 三级网格Z序编码（标准图4）
      */
-    private String encodeLevel3(int lngCount, int latCount, String hemisphere) {
+    private static String encodeLevel3(int lngCount, int latCount, String hemisphere) {
         int[][] encodingMap = getLevel3EncodingMap(hemisphere);
         return String.valueOf(encodingMap[latCount][lngCount]);
     }
@@ -281,7 +281,7 @@ public class BeiDouGridEncoder {
     /**
      * 四级/五级网格编码（标准图5、6）
      */
-    private String encodeLevel4_5(int lngCount, int latCount, String hemisphere) {
+    private static String encodeLevel4_5(int lngCount, int latCount, String hemisphere) {
         int[] adjusted = adjustCounts(lngCount, latCount, hemisphere, 14, 14);
         return toHexPair(adjusted[0], adjusted[1]);
     }
@@ -289,7 +289,7 @@ public class BeiDouGridEncoder {
     /**
      * 六级网格Z序编码（标准图7）
      */
-    private String encodeLevel6(int lngCount, int latCount, String hemisphere) {
+    private static String encodeLevel6(int lngCount, int latCount, String hemisphere) {
         int[][] encodingMap = getLevel6EncodingMap(hemisphere);
         return String.valueOf(encodingMap[latCount][lngCount]);
     }
@@ -297,7 +297,7 @@ public class BeiDouGridEncoder {
     /**
      * 七到十级网格编码（标准图8）
      */
-    private String encodeLevel7_10(int lngCount, int latCount, String hemisphere) {
+    private static String encodeLevel7_10(int lngCount, int latCount, String hemisphere) {
         int[] adjusted = adjustCounts(lngCount, latCount, hemisphere, 7, 7);
         return toHexPair(adjusted[0], adjusted[1]);
     }
@@ -306,7 +306,7 @@ public class BeiDouGridEncoder {
      * 方向调整通用方法
      * 根据半球信息调整经纬度网格索引
      */
-    private int[] adjustCounts(int lng, int lat, String hemisphere, int maxLng, int maxLat) {
+    private static int[] adjustCounts(int lng, int lat, String hemisphere, int maxLng, int maxLat) {
         return switch (hemisphere) {
             case "NW" -> new int[]{lng, maxLat - lat};          // 经度递增，纬度递减
             case "NE" -> new int[]{lng, lat};                   // 双递增
@@ -320,7 +320,7 @@ public class BeiDouGridEncoder {
      * 获取三级网格编码映射表
      * 使用缓存避免重复创建
      */
-    private int[][] getLevel3EncodingMap(String hemisphere) {
+    private static int[][] getLevel3EncodingMap(String hemisphere) {
         return LEVEL3_ENCODING_MAP_CACHE.computeIfAbsent(hemisphere, key -> switch (key) {
             case "NW" -> new int[][]{{1, 0}, {3, 2}, {5, 4}};
             case "NE" -> new int[][]{{0, 1}, {2, 3}, {4, 5}};
@@ -334,7 +334,7 @@ public class BeiDouGridEncoder {
      * 获取六级网格编码映射表
      * 使用缓存避免重复创建
      */
-    private int[][] getLevel6EncodingMap(String hemisphere) {
+    private static int[][] getLevel6EncodingMap(String hemisphere) {
         return LEVEL6_ENCODING_MAP_CACHE.computeIfAbsent(hemisphere, key -> switch (key) {
             case "NW" -> new int[][]{{1, 0}, {3, 2}};
             case "NE" -> new int[][]{{0, 1}, {2, 3}};
@@ -347,7 +347,7 @@ public class BeiDouGridEncoder {
     /**
      * 转换为十六进制对（如 3,A）
      */
-    private String toHexPair(int lng, int lat) {
+    private static String toHexPair(int lng, int lat) {
         return Integer.toHexString(lng).toUpperCase() +
                 Integer.toHexString(lat).toUpperCase();
     }
@@ -355,7 +355,7 @@ public class BeiDouGridEncoder {
     /**
      * 构建二进制字符串
      */
-    private StringBuilder buildBinaryString(int n, String signCode) {
+    private static StringBuilder buildBinaryString(int n, String signCode) {
         StringBuilder binaryString = new StringBuilder();
         binaryString.append(signCode); // 高度方向位
 
@@ -369,7 +369,7 @@ public class BeiDouGridEncoder {
     /**
      * 构建高度编码
      */
-    private String buildAltitudeCode(StringBuilder binaryString, int level, String signCode) {
+    private static String buildAltitudeCode(StringBuilder binaryString, int level, String signCode) {
         StringBuilder altitudeCode = new StringBuilder();
         altitudeCode.append(signCode); // 高度方向位
 

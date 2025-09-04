@@ -2,8 +2,8 @@ package io.github.ywx001.core.common;
 
 import io.github.ywx001.core.constants.BeiDouGridConstants;
 import io.github.ywx001.core.decoder.BeiDouGridDecoder;
+import io.github.ywx001.core.encoder.BeiDouGridEncoder;
 import io.github.ywx001.core.model.BeiDouGeoPoint;
-import io.github.ywx001.core.utils.BeiDouGridUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
@@ -137,11 +137,11 @@ public class BeiDouGrid3DRangeQuery {
      */
     private static String generateLevel1GridCode3D(int lngIdx, int latIdx, int altIdx) {
         // 生成二维部分
-        String grid2D = BeiDouGridUtils.encode2D(
+        String grid2D = BeiDouGridEncoder.encode2D(
                 new BeiDouGeoPoint(lngIdx * 6.0 + 3.0, latIdx * 4.0 + 2.0, 0), 1);
 
         // 生成高度部分
-        String altitudeCode = BeiDouGridUtils.encode3DAltitude(altIdx * getGridHeight3D(1) + getGridHeight3D(1) / 2, 1);
+        String altitudeCode = BeiDouGridEncoder.encode3DAltitude(altIdx * getGridHeight3D(1) + getGridHeight3D(1) / 2, 1);
 
         // 组合成完整的三维编码
         return combine2DAndAltitude(grid2D, altitudeCode, 1);
@@ -189,7 +189,7 @@ public class BeiDouGrid3DRangeQuery {
      *         - parentGrid格式无效
      *         - parentGrid是10级网格（无子网格）
      *
-     * @see BeiDouGridUtils#decode3D 三维网格解码实现
+     * @see BeiDouGridDecoder#decode3D 三维网格解码实现
      * @see BeiDouGridConstants#GRID_DIVISIONS 各级网格划分规则
      * @see BeiDouGridConstants#GRID_SIZES_DEGREES 各级网格尺寸定义
      */
@@ -203,7 +203,7 @@ public class BeiDouGrid3DRangeQuery {
         }
 
         // 解码父网格获取西南角点（包括高度）
-        Map<String, Object> decoded = BeiDouGridUtils.decode3D(parentGrid);
+        Map<String, Object> decoded = BeiDouGridDecoder.decode3D(parentGrid);
         BeiDouGeoPoint parentSWCorner = (BeiDouGeoPoint) decoded.get("geoPoint");
         double parentSWCornerLatitude = parentSWCorner.getLatitude();
         double parentSWCornerLongitude = parentSWCorner.getLongitude();
@@ -243,7 +243,7 @@ public class BeiDouGrid3DRangeQuery {
                 // 生成高度方向的网格
                 for (int k = minAltIdx; k <= maxAltIdx; k++) {
                     double childAlt = k * altSize + altSize / 2;
-                    String childGrid = BeiDouGridUtils.encode3D(
+                    String childGrid = BeiDouGridEncoder.encode3D(
                             new BeiDouGeoPoint(childLng, childLat, childAlt), currentLevel + 1
                     );
                     childGrids.add(childGrid);
@@ -263,7 +263,7 @@ public class BeiDouGrid3DRangeQuery {
                                                  double gridMinAlt, double gridMaxAlt) {
         try {
             // 解码获取网格边界
-            Map<String, Object> decoded = BeiDouGridUtils.decode3D(grid3D);
+            Map<String, Object> decoded = BeiDouGridDecoder.decode3D(grid3D);
             BeiDouGeoPoint swPoint = (BeiDouGeoPoint) decoded.get("geoPoint");
 
             // 获取网格的尺寸（经度、纬度、高度）
@@ -356,7 +356,7 @@ public class BeiDouGrid3DRangeQuery {
             double gridMaxAlt = gridMinAlt + gridHeight;
 
             // 生成高度编码
-            String altitudeCode = BeiDouGridUtils.encode3DAltitude(gridMinAlt + gridHeight / 2, level);
+            String altitudeCode = BeiDouGridEncoder.encode3DAltitude(gridMinAlt + gridHeight / 2, level);
 
             // 组合成完整的三维编码
             String grid3D = combine2DAndAltitude(grid2D, altitudeCode, level);
@@ -434,7 +434,7 @@ public class BeiDouGrid3DRangeQuery {
     private static boolean is3DGridValid(String grid3D, Geometry geom, double queryMinAlt, double queryMaxAlt) {
         try {
             // 解码获取网格的三维边界信息
-            Map<String, Object> decoded = BeiDouGridUtils.decode3D(grid3D);
+            Map<String, Object> decoded = BeiDouGridDecoder.decode3D(grid3D);
             BeiDouGeoPoint swPoint = (BeiDouGeoPoint) decoded.get("geoPoint");
             int level = getGridLevel3D(grid3D);
 

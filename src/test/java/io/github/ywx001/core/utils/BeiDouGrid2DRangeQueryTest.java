@@ -61,7 +61,7 @@ class BeiDouGrid2DRangeQueryTest {
         Geometry line = GEOMETRY_FACTORY.createLineString(lineCoords);
 
         // 查找二级网格码
-        Set<String> gridCodes = BeiDouGrid2DRangeQuery.findGridCodesInRange(line, 2);
+        Set<String> gridCodes = BeiDouGridUtils.find2DIntersectingGridCodes(line, 2);
 
         assertNotNull(gridCodes);
         assertFalse(gridCodes.isEmpty());
