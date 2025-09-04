@@ -107,6 +107,43 @@ import java.util.Set;
 - 网格化空间分析
 - 地理信息系统(GIS)集成
 
+## 空间线查询
+
+新增的三维线段范围查询功能，支持根据该线段查找相交的北斗网格码，效率比空间查询高：
+
+```java
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import java.util.List;
+
+        Coordinate[] coordinates = new Coordinate[]{
+                new Coordinate(113.551158, 22.40233,100),
+                new Coordinate(113.55386, 22.402613, 120),
+                new Coordinate(113.556889, 22.40143, 150),
+                new Coordinate(113.558322, 22.399175, 100)
+        };
+        LineString lineString = GEOMETRY_FACTORY.createLineString(coordinates);
+        List<String> result = BeiDouGridUtils.find3DIntersectingGridCodes(lineString, 6);
+		// 输出结果示例：[N049F00B404034012001, N049F00B404034012011, N049F00B404034022001, N049F00B404034022011, N049F00B404034032001,
+		// N049F00B404034032110, N049F00B404034041120, N049F00B404034041130, N049F00B404034051120, N049F00B404034051110, N049F00B404034061100,
+		// N049F00B404034060120, N049F00B404034060110, N049F00B404034060011, N049F00B40403307E021, N049F00B40403307E001]
+
+```
+**功能特点：**
+- 支持多种几何类型：线(LineString)
+- 支持不同高度的点组成的线
+- 多级网格筛选优化，快速定位相交网格
+- 并行计算支持，处理大规模网格数据
+- 数学优化判断，减少几何计算开销
+
+**适用场景：**
+- 地理航路
+- 空间索引和范围查询  
+- 网格化空间分析
+- 地理信息系统(GIS)集成
+
+
 ## API 文档
 
 详细的API文档请查看 [Javadoc](target/apidocs/index.html)

@@ -3,12 +3,10 @@ package io.github.ywx001.core.utils;
 import io.github.ywx001.core.common.BeiDouGrid3DRangeQuery;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.PrecisionModel;
+import org.locationtech.jts.geom.*;
 import org.locationtech.jts.io.geojson.GeoJsonWriter;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -93,5 +91,20 @@ class BeiDouGrid2D3DRangeQueryTest {
         assertTrue(heights.contains(100.0));
         assertTrue(heights.contains(120.0));
         assertTrue(heights.contains(150.0));
+    }
+    @Test
+    void testFind3DGridCodesWithLineString(){
+        Coordinate[] coordinates = new Coordinate[]{
+                new Coordinate(113.551158, 22.40233,100),
+                new Coordinate(113.55386, 22.402613, 120),
+                new Coordinate(113.556889, 22.40143, 150),
+                new Coordinate(113.558322, 22.399175, 100)
+        };
+        LineString lineString = GEOMETRY_FACTORY.createLineString(coordinates);
+        List<String> result = BeiDouGridUtils.find3DIntersectingGridCodes(lineString, 6);
+
+        assertNotNull(result);
+        assertFalse(result.isEmpty());
+        log.debug("结果{}", result);
     }
 }

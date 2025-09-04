@@ -10,7 +10,9 @@ import io.github.ywx001.core.encoder.BeiDouGridEncoder;
 import io.github.ywx001.core.model.BeiDouGeoPoint;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.LineString;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -218,6 +220,10 @@ public class BeiDouGridUtils {
      */
     public static Set<String> find3DIntersectingGridCodes(Geometry geometry, int targetLevel, double minHeight, double maxHeight) {
         return BeiDouGrid3DRangeQuery.find3DGridCodesInRange(geometry, targetLevel, minHeight, maxHeight);
+    }
+
+    public static List<String> find3DIntersectingGridCodes(LineString lineString, int targetLevel) {
+        return BeiDouGrid3DRangeQuery.find3DGridCodesWithLineString(lineString, targetLevel);
     }
 
 }

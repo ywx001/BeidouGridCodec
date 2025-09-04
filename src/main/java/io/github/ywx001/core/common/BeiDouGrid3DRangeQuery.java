@@ -65,28 +65,35 @@ public class BeiDouGrid3DRangeQuery {
      * @param targetLevel 所生成的网格等级
      * @return 线所包含的网格点
      */
-    public List<BeiDouGeoPoint> find3DGridCodesWithLineString(LineString lineString, int targetLevel) {
+    public static List<String> find3DGridCodesWithLineString(LineString lineString, int targetLevel) {
+        long startTime = System.currentTimeMillis();
+        List<String> result = new ArrayList<>();
         //获取被点填充好的线
         Geometry newGeom = GisUtils.lineFillPoints(lineString, BeiDouGridConstants.GRID_SIZES_3D[targetLevel]);
         Coordinate[] coordinates = newGeom.getCoordinates();
-        List<BeiDouGeoPoint> result = new ArrayList<>();
+        List<BeiDouGeoPoint> beiDouGeoPoints = new ArrayList<>();
         for (Coordinate coordinate : coordinates) {
-            //
+            //计算三维网格
             String code = BeiDouGridUtils.encode3D(new BeiDouGeoPoint(coordinate.x, coordinate.y, coordinate.z), targetLevel);
-            BeiDouGeoPoint beiDouGeoPoint = new BeiDouGridDecoder().decode3D(code);
-            if (result.size() > 1) {
-                double lastGridLng = result.get(result.size() - 1).getLongitude();
-                double lastGridLat = result.get(result.size() - 1).getLatitude();
-                double lastGridHeight = result.get(result.size() - 1).getHeight();
+            BeiDouGeoPoint beiDouGeoPoint = BeiDouGridDecoder.decode3D(code);
+            if (beiDouGeoPoints.size() > 1) {
+                double lastGridLng = beiDouGeoPoints.get(beiDouGeoPoints.size() - 1).getLongitude();
+                double lastGridLat = beiDouGeoPoints.get(beiDouGeoPoints.size() - 1).getLatitude();
+                double lastGridHeight = beiDouGeoPoints.get(beiDouGeoPoints.size() - 1).getHeight();
 
                 BeiDouGeoPoint lastBeiDouGeoPoint = new BeiDouGeoPoint(lastGridLng, lastGridLat, lastGridHeight);
+                //去重判断
                 if (!beiDouGeoPoint.equals(lastBeiDouGeoPoint)){
-                    result.add(beiDouGeoPoint);
+                    beiDouGeoPoints.add(beiDouGeoPoint);
+                    result.add(code);
                 }
             } else {
-                result.add(beiDouGeoPoint);
+                beiDouGeoPoints.add(beiDouGeoPoint);
+                result.add(code);
             }
         }
+        long totalTime = System.currentTimeMillis() - startTime;
+        log.debug("线查询完成：找到 {} 个{}级网格，总耗时 {}ms", result.size(), targetLevel, totalTime);
         return result;
     }
 
