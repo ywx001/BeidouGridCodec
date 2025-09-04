@@ -24,7 +24,7 @@ public class BeiDouGridDecoder {
      * @param code 二维网格编码
      * @return 解码后的地理点对象（所在网格左下角点）
      */
-    public BeiDouGeoPoint decode2D(String code) {
+    public static BeiDouGeoPoint decode2D(String code) {
         if (code == null || code.isEmpty()) {
             throw new IllegalArgumentException("位置码不能为空");
         }
@@ -58,7 +58,7 @@ public class BeiDouGridDecoder {
      * @param code 三维网格编码
      * @return 包含地理点和高度信息的 Map
      */
-    public BeiDouGeoPoint decode3D(String code) {
+    public static BeiDouGeoPoint decode3D(String code) {
         if (code == null || code.isEmpty()) {
             throw new IllegalArgumentException("位置码不能为空");
         }
@@ -108,7 +108,7 @@ public class BeiDouGridDecoder {
     /**
      * 获取经纬度方向
      */
-    private Map<String, String> getDirections(String code) {
+    private static Map<String, String> getDirections(String code) {
         Map<String, String> directions = new HashMap<>(2);
         directions.put("latDirection", code.charAt(0) == 'N' ? "N" : "S");
         int lngPart = Integer.parseInt(code.substring(1, 3));
@@ -119,7 +119,7 @@ public class BeiDouGridDecoder {
     /**
      * 解码第n级网格码
      */
-    private double[] decodeN(String code, int n) {
+    private static double[] decodeN(String code, int n) {
         if (n < 1 || n > 10) {
             throw new IllegalArgumentException("层级错误: " + n);
         }
@@ -146,7 +146,7 @@ public class BeiDouGridDecoder {
     /**
      * 获取某一层级的位置码片段
      */
-    private String getCodeFragment(String code, int level) {
+    private static String getCodeFragment(String code, int level) {
         if (level == 0) {
             return String.valueOf(code.charAt(0));
         }
@@ -158,7 +158,7 @@ public class BeiDouGridDecoder {
     /**
      * 解析行列号
      */
-    private int[] getRowAndCol(String codeFragment, int level, String code) {
+    private static int[] getRowAndCol(String codeFragment, int level, String code) {
         if (codeFragment.length() != (BeiDouGridConstants.CODE_LENGTH_AT_LEVEL[level] - BeiDouGridConstants.CODE_LENGTH_AT_LEVEL[level - 1])) {
             throw new IllegalArgumentException("编码片段长度错误: " + codeFragment);
         }
@@ -207,7 +207,7 @@ public class BeiDouGridDecoder {
     /**
      * 解码二级网格
      */
-    private int decodeLevel2(String codeFragment, String code, boolean isLng) {
+    private static int decodeLevel2(String codeFragment, String code, boolean isLng) {
         int index = isLng ? 0 : 1;
         int encoded = Integer.parseInt(codeFragment.substring(index, index + 1), 16);
         if (code != null) {
@@ -224,7 +224,7 @@ public class BeiDouGridDecoder {
     /**
      * 解码四级/五级网格
      */
-    private int decodeLevel4_5(String codeFragment, String code, boolean isLng) {
+    private static int decodeLevel4_5(String codeFragment, String code, boolean isLng) {
         int index = isLng ? 0 : 1;
         int encoded = Integer.parseInt(codeFragment.substring(index, index + 1), 16);
         if (code != null) {
@@ -241,7 +241,7 @@ public class BeiDouGridDecoder {
     /**
      * 解码三级网格
      */
-    private int[] decodeLevel3(String codeFragment, String code) {
+    private static int[] decodeLevel3(String codeFragment, String code) {
         int n = Integer.parseInt(codeFragment);
         int[] indices = new int[2];
 
@@ -283,7 +283,7 @@ public class BeiDouGridDecoder {
     /**
      * 解码六级网格
      */
-    private int[] decodeLevel6(String codeFragment, String code) {
+    private static int[] decodeLevel6(String codeFragment, String code) {
         int n = Integer.parseInt(codeFragment);
         int[] indices = new int[2];
 
@@ -322,7 +322,7 @@ public class BeiDouGridDecoder {
     /**
      * 从三维编码中提取二维编码部分
      */
-    public String extract2DCode(String code3D, int level) {
+    public static String extract2DCode(String code3D, int level) {
         StringBuilder code2D = new StringBuilder();
         code2D.append(code3D.charAt(0));
 
@@ -346,7 +346,7 @@ public class BeiDouGridDecoder {
     /**
      * 从三维编码中解码高度信息（网格底平面高度）
      */
-    private double decode3DHeight(String code, int level) {
+    private static double decode3DHeight(String code, int level) {
         int heightSign = code.charAt(1) == '0' ? 1 : -1;
         double height = 0;
         int codeIndex = 2;
@@ -377,7 +377,7 @@ public class BeiDouGridDecoder {
     /**
      * 获取三级网格编码映射表
      */
-    private int[][] getLevel3EncodingMap(String hemisphere) {
+    private static int[][] getLevel3EncodingMap(String hemisphere) {
         return LEVEL3_ENCODING_MAP_CACHE.computeIfAbsent(hemisphere, key -> switch (key) {
             case "NW" -> new int[][]{{1, 0}, {3, 2}, {5, 4}};
             case "NE" -> new int[][]{{0, 1}, {2, 3}, {4, 5}};
@@ -390,7 +390,7 @@ public class BeiDouGridDecoder {
     /**
      * 获取六级网格编码映射表
      */
-    private int[][] getLevel6EncodingMap(String hemisphere) {
+    private static int[][] getLevel6EncodingMap(String hemisphere) {
         return LEVEL6_ENCODING_MAP_CACHE.computeIfAbsent(hemisphere, key -> switch (key) {
             case "NW" -> new int[][]{{1, 0}, {3, 2}};
             case "NE" -> new int[][]{{0, 1}, {2, 3}};

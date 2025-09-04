@@ -2,8 +2,8 @@ package io.github.ywx001.core.common;
 
 import io.github.ywx001.core.constants.BeiDouGridConstants;
 import io.github.ywx001.core.decoder.BeiDouGridDecoder;
+import io.github.ywx001.core.encoder.BeiDouGridEncoder;
 import io.github.ywx001.core.model.BeiDouGeoPoint;
-import io.github.ywx001.core.utils.BeiDouGridUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.*;
 import org.locationtech.jts.io.geojson.GeoJsonWriter;
@@ -51,7 +51,7 @@ public class BeiDouGrid2DRangeQuery {
             for (double lat = minLat; lat <= maxLat + latSize; lat += latSize) {
 
                 // 生成网格编码
-                String gridCode = BeiDouGridUtils.encode2D(
+                String gridCode = BeiDouGridEncoder.encode2D(
                         new BeiDouGeoPoint(lng, lat, 0), targetLevel
                 );
 
@@ -195,7 +195,7 @@ public class BeiDouGrid2DRangeQuery {
      */
     public static Geometry createGridPolygon(String gridCode) {
         // 1. 解码获取西南角坐标（注意：解码器返回的是网格的西南角点，不是中心点）
-        BeiDouGeoPoint swCorner = BeiDouGridUtils.decode2D(gridCode);
+        BeiDouGeoPoint swCorner = BeiDouGridDecoder.decode2D(gridCode);
 
         // 2. 获取网格级别
         int level = getGridLevel(gridCode);
@@ -230,7 +230,7 @@ public class BeiDouGrid2DRangeQuery {
      * @throws IllegalArgumentException 如果参数不合法：
      *                                  - parentGrid格式无效
      *                                  - parentGrid层级超出1-9范围
-     * @see BeiDouGridUtils#decode2D 网格解码实现
+     * @see BeiDouGridDecoder#decode2D 网格解码实现
      * @see BeiDouGridConstants#GRID_DIVISIONS 各级网格划分规则
      * @see BeiDouGridConstants#GRID_SIZES_DEGREES 各级网格尺寸定义
      */
@@ -246,7 +246,7 @@ public class BeiDouGrid2DRangeQuery {
         Set<String> childGrids = new HashSet<>();
 
         // 解码父网格获取西南角点（注意：解码器返回的是网格的西南角点，不是中心点）
-        BeiDouGeoPoint parentSWCorner = BeiDouGridUtils.decode2D(parentGrid);
+        BeiDouGeoPoint parentSWCorner = BeiDouGridDecoder.decode2D(parentGrid);
 
         // 获取子网格的划分数量
         int[] divisions = BeiDouGridConstants.GRID_DIVISIONS[currentLevel + 1];
@@ -269,7 +269,7 @@ public class BeiDouGrid2DRangeQuery {
                 double childLng = childSWLng + lngSize / 2;
                 double childLat = childSWLat + latSize / 2;
 
-                String childGrid = BeiDouGridUtils.encode2D(
+                String childGrid = BeiDouGridEncoder.encode2D(
                         new BeiDouGeoPoint(childLng, childLat, 0), currentLevel + 1);
                 childGrids.add(childGrid);
             }
@@ -353,7 +353,7 @@ public class BeiDouGrid2DRangeQuery {
     public static boolean isGridIntersectsMath(String gridCode, Geometry geom, Envelope geomEnvelope) {
         // 1. 网格解码并记录耗时
         long decodeStart = System.nanoTime();
-        BeiDouGeoPoint swCorner = BeiDouGridUtils.decode2D(gridCode);
+        BeiDouGeoPoint swCorner = BeiDouGridDecoder.decode2D(gridCode);
         long decodeTime = System.nanoTime() - decodeStart;
         if (decodeTime > 100000) { // 超过100μs的记录
             log.debug("网格解码 {} 耗时: {}μs", gridCode, decodeTime / 1000);
