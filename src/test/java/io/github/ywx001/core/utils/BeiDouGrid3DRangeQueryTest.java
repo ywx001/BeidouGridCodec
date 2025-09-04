@@ -1,5 +1,6 @@
 package io.github.ywx001.core.utils;
 
+import io.github.ywx001.core.common.BeiDouGrid3DRangeQuery;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;

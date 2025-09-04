@@ -2,6 +2,7 @@ package io.github.ywx001.core.encoder;
 
 import io.github.ywx001.core.constants.BeiDouGridConstants;
 import io.github.ywx001.core.model.BeiDouGeoPoint;
+import io.github.ywx001.core.common.BeiDouGridCommonUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
@@ -35,7 +36,7 @@ public class BeiDouGridEncoder {
         BigDecimal baseLat = BigDecimal.ZERO;
 
         // 获取半球信息，用于网格码方向转换
-        String hemisphere = BeiDouGridConstants.getHemisphere(point);
+        String hemisphere = BeiDouGridCommonUtils.getHemisphere(point);
 
         // 存储结果，以半球纬度方向开头
         StringBuilder resCode = new StringBuilder().append(hemisphere.charAt(0));
@@ -186,7 +187,7 @@ public class BeiDouGridEncoder {
                 latOffset = latIndex * BeiDouGridConstants.GRID_SIZES_SECONDS[i][1];
 
                 // 生成二维编码片段
-                fragment2D = encodeFragment(i, lngIndex + 31, latIndex, BeiDouGridConstants.getHemisphere(point));
+                fragment2D = encodeFragment(i, lngIndex + 31, latIndex, BeiDouGridCommonUtils.getHemisphere(point));
             } else {
                 // 其他级别
                 int lngIndex = (int) Math.floor((Math.abs(lngInSec) - lngOffset) / BeiDouGridConstants.GRID_SIZES_SECONDS[i][0]);
@@ -197,7 +198,7 @@ public class BeiDouGridEncoder {
                 latOffset += latIndex * BeiDouGridConstants.GRID_SIZES_SECONDS[i][1];
 
                 // 生成二维编码片段
-                fragment2D = encodeFragment(i, lngIndex, latIndex, BeiDouGridConstants.getHemisphere(point));
+                fragment2D = encodeFragment(i, lngIndex, latIndex, BeiDouGridCommonUtils.getHemisphere(point));
             }
 
             // 添加二维编码片段

@@ -1,6 +1,9 @@
 package io.github.ywx001.core.utils;
 
 
+import io.github.ywx001.core.common.BeiDouGrid2DRangeQuery;
+import io.github.ywx001.core.common.BeiDouGrid3DRangeQuery;
+import io.github.ywx001.core.common.BeiDouGridCommonUtils;
 import io.github.ywx001.core.constants.BeiDouGridConstants;
 import io.github.ywx001.core.decoder.BeiDouGridDecoder;
 import io.github.ywx001.core.encoder.BeiDouGridEncoder;
@@ -127,7 +130,7 @@ public class BeiDouGridUtils {
      * @throws IllegalArgumentException 如果经纬度参数无效（为空或非数字）
      */
     public static String getHemisphere(BeiDouGeoPoint point) {
-        return BeiDouGridConstants.getHemisphere(point);
+        return BeiDouGridCommonUtils.getHemisphere(point);
     }
 
     /**

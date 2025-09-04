@@ -1,8 +1,9 @@
-package io.github.ywx001.core.utils;
+package io.github.ywx001.core.common;
 
 import io.github.ywx001.core.constants.BeiDouGridConstants;
 import io.github.ywx001.core.decoder.BeiDouGridDecoder;
 import io.github.ywx001.core.model.BeiDouGeoPoint;
+import io.github.ywx001.core.utils.BeiDouGridUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.*;
 import org.locationtech.jts.io.geojson.GeoJsonWriter;

@@ -1,5 +1,6 @@
 package io.github.ywx001.core.utils;
 
+import io.github.ywx001.core.common.BeiDouGrid2DRangeQuery;
 import io.github.ywx001.core.decoder.BeiDouGridDecoder;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;

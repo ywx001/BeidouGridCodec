@@ -2,6 +2,7 @@ package io.github.ywx001.core.decoder;
 
 import io.github.ywx001.core.constants.BeiDouGridConstants;
 import io.github.ywx001.core.model.BeiDouGeoPoint;
+import io.github.ywx001.core.common.BeiDouGridCommonUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -212,7 +213,7 @@ public class BeiDouGridDecoder {
         int index = isLng ? 0 : 1;
         int encoded = Integer.parseInt(codeFragment.substring(index, index + 1), 16);
         if (code != null) {
-            String hemisphere = BeiDouGridConstants.getHemisphereFromCode(code);
+            String hemisphere = BeiDouGridCommonUtils.getHemisphereFromCode(code);
             return switch (hemisphere) {
                 case "NE", "NW" -> encoded;
                 case "SE", "SW" -> isLng ? 11 - encoded : 7 - encoded;
@@ -229,7 +230,7 @@ public class BeiDouGridDecoder {
         int index = isLng ? 0 : 1;
         int encoded = Integer.parseInt(codeFragment.substring(index, index + 1), 16);
         if (code != null) {
-            String hemisphere = BeiDouGridConstants.getHemisphereFromCode(code);
+            String hemisphere = BeiDouGridCommonUtils.getHemisphereFromCode(code);
             return switch (hemisphere) {
                 case "NE", "NW" -> encoded;
                 case "SE", "SW" -> 14 - encoded;
@@ -247,7 +248,7 @@ public class BeiDouGridDecoder {
         int[] indices = new int[2];
 
         if (code != null) {
-            String hemisphere = BeiDouGridConstants.getHemisphereFromCode(code);
+            String hemisphere = BeiDouGridCommonUtils.getHemisphereFromCode(code);
             int[][] encodingMap = getLevel3EncodingMap(hemisphere);
             boolean found = false;
 
@@ -289,7 +290,7 @@ public class BeiDouGridDecoder {
         int[] indices = new int[2];
 
         if (code != null) {
-            String hemisphere = BeiDouGridConstants.getHemisphereFromCode(code);
+            String hemisphere = BeiDouGridCommonUtils.getHemisphereFromCode(code);
             int[][] encodingMap = getLevel6EncodingMap(hemisphere);
             boolean found = false;
 
