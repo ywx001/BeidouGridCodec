@@ -6,7 +6,7 @@
 
     <groupId>io.github.ywx001</groupId>
     <artifactId>beidou-grid-codec</artifactId>
-    <version>1.0.03</version>
+    <version>1.0.04</version>
     <packaging>jar</packaging>
 
     <name>BeiDou Grid Codec</name>
