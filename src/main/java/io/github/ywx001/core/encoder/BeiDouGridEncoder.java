@@ -101,13 +101,13 @@ public class BeiDouGridEncoder {
         }
 
         // 计算高度编码的数学参数
-        double theta = 1.0 / 2048 / 3600;
-        double theta0 = 1;
+        double theta = Math.PI / 180 / 60 / 60 / 2048;  // theta = π/180/3600/2048
+        double theta0 = Math.PI / 180;                  // theta0 = π/180
 
         // 计算高度编码的值
         int n = (int) Math.floor(
                 (theta0 / theta) *
-                        (Math.log((height + BeiDouGridConstants.EARTH_RADIUS) / BeiDouGridConstants.EARTH_RADIUS) / Math.log(1 + theta0 * (Math.PI / 180)))
+                        (Math.log((height + BeiDouGridConstants.EARTH_RADIUS) / BeiDouGridConstants.EARTH_RADIUS) / Math.log(1 + theta0))
         );
 
         // 确定高度方向编码（0表示正，1表示负）
@@ -132,13 +132,13 @@ public class BeiDouGridEncoder {
         validateEncodeParameters(point, level);
 
         // 计算高度编码的数学参数
-        double theta = 1.0 / 2048 / 3600;
-        double theta0 = 1;
+        double theta = Math.PI / 180 / 60 / 60 / 2048;  // theta = π/180/3600/2048
+        double theta0 = Math.PI / 180;                  // theta0 = π/180
 
         // 计算高度编码的值
         int n = (int) Math.floor(
                 (theta0 / theta) *
-                        (Math.log((point.getHeight() + BeiDouGridConstants.EARTH_RADIUS) / BeiDouGridConstants.EARTH_RADIUS) / Math.log(1 + theta0 * (Math.PI / 180)))
+                        (Math.log((point.getHeight() + BeiDouGridConstants.EARTH_RADIUS) / BeiDouGridConstants.EARTH_RADIUS) / Math.log(1 + theta0))
         );
 
         // 确定高度方向编码（0表示正，1表示负）
