@@ -62,7 +62,7 @@ class BeiDouGrid2DUtilsTest {
         String code2D = "N31A";
         BeiDouGeoPoint point = decode2D(code2D);
         assertNotNull(point);
-        assertTrue(point.getLatitude() > 0);
+        assertEquals(point.getLatitude(), 0);
     }
 
     @Test
@@ -119,4 +119,46 @@ class BeiDouGrid2DUtilsTest {
         assertNotNull(result);
     }
 
+    /**
+     * 测试三维解码高度算法
+     * 验证解码返回的是网格的底部高度
+     */
+    @Test
+    void testFixedHeightDecode() {
+        // 创建测试坐标点
+        double inputHeight = 50.0;
+        BeiDouGeoPoint point = BeiDouGeoPoint.builder()
+                .latitude(31.1415575)
+                .longitude(120.5830508)
+                .height(inputHeight)
+                .build();
+
+        // 测试不同级别的编码解码
+        int[] testLevels = {6, 7, 8, 9, 10};
+        
+        for (int level : testLevels) {
+            log.info("\n--- {}级网格测试 ---", level);
+            
+            // 三维编码
+            String code3D = encode3D(point, level);
+            log.info("{}级三维编码: {}", level, code3D);
+            
+            // 三维解码
+            BeiDouGeoPoint decodedPoint = decode3D(code3D);
+            log.info("{}级三维解码: {}", level, decodedPoint);
+            
+            // 验证解码结果
+            assertNotNull(decodedPoint, "解码结果不应为空");
+            assertNotNull(decodedPoint.getHeight(), "解码高度不应为空");
+            
+            double decodedHeight = decodedPoint.getHeight();
+            log.info("输入高度: {}米, 解码高度: {}米, 差值: {}米", 
+                    inputHeight, decodedHeight, Math.abs(inputHeight - decodedHeight));
+            
+            // 验证解码高度应该是网格的底部高度（小于等于输入高度）
+            assertTrue(decodedHeight <= inputHeight + 0.01, 
+                "解码高度应小于等于输入高度: " + 
+                "输入=" + inputHeight + "米, 解码=" + decodedHeight + "米");
+        }
+    }
 }

@@ -347,29 +347,50 @@ public class BeiDouGridDecoder {
      * 从三维编码中解码高度信息（网格底平面高度）
      */
     private static double decode3DHeight(String code, int level) {
+        // 高度方向符号：0表示地上，1表示地下
         int heightSign = code.charAt(1) == '0' ? 1 : -1;
-        double height = 0;
+
+        // 重建完整的高度索引n
+        int n = 0;
         int codeIndex = 2;
 
         for (int i = 1; i <= level; i++) {
+            // 跳过二维编码部分
             int level2DLength = BeiDouGridConstants.CODE_LENGTH_AT_LEVEL[i] - BeiDouGridConstants.CODE_LENGTH_AT_LEVEL[i - 1];
             codeIndex += level2DLength;
 
+            // 获取当前级别的高度编码
+            int heightCodeLength = (i == 1) ? 2 : 1;
+            String heightCodeStr = code.substring(codeIndex, codeIndex + heightCodeLength);
+            codeIndex += heightCodeLength;
+
+            // 解析高度编码值
+            int heightIndex;
             if (i == 1) {
-                int heightIndex = Integer.parseInt(code.substring(codeIndex, codeIndex + 2));
-                height += heightIndex * BeiDouGridConstants.GRID_SIZES_3D[i];
-                codeIndex += 2;
+                // 第一级特殊处理：2位十进制数表示6位二进制值
+                heightIndex = Integer.parseInt(heightCodeStr, 10);
             } else {
-                int heightIndex;
-                if (i == 4 || i == 5) {
-                    heightIndex = Integer.parseInt(code.substring(codeIndex, codeIndex + 1), 16);
-                } else {
-                    heightIndex = Integer.parseInt(code.substring(codeIndex, codeIndex + 1));
+                int radix = BeiDouGridConstants.ELEVATION_ENCODING[i][1];
+                heightIndex = Integer.parseInt(heightCodeStr, radix);
+            }
+
+            // 按照标准将编码值放置到正确的位位置
+            int[] bitRange = BeiDouGridConstants.HEIGHT_BIT_RANGES[i];
+            int startBit = bitRange[0];
+            
+            // 将heightIndex的各位设置到n的相应位置（从第1位开始计数）
+            for (int bit = 0; bit < (bitRange[1] - bitRange[0] + 1); bit++) {
+                if (((heightIndex >> bit) & 1) == 1) {
+                    n |= (1 << (startBit - 1 + bit));
                 }
-                height += heightIndex * BeiDouGridConstants.GRID_SIZES_3D[i];
-                codeIndex += 1;
             }
         }
+
+        // 使用标准逆公式计算高度：H = (1 + θ0)^(n*θ/θ0) * r0 - r0
+        double theta = Math.PI / 180 / 60 / 60 / 2048;  // theta = π/180/3600/2048
+        double theta0 = Math.PI / 180;                  // theta0 = π/180
+
+        double height = Math.pow(1 + theta0, n * theta / theta0) * BeiDouGridConstants.EARTH_RADIUS - BeiDouGridConstants.EARTH_RADIUS;
 
         return height * heightSign;
     }

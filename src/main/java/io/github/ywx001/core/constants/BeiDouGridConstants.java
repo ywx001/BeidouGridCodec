@@ -1,7 +1,5 @@
 package io.github.ywx001.core.constants;
 
-import io.github.ywx001.core.model.BeiDouGeoPoint;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -111,6 +109,24 @@ public class BeiDouGridConstants {
             {3, 8},    // 8级：3位，8进制
             {3, 8},    // 9级：3位，8进制
             {3, 8}     // 10级：3位，8进制
+    };
+
+    /**
+     * 32位整数n中各级别编码的位位置（按照GB/T 39409-2020标准附录C）
+     * 从低位到高位的位范围：[起始位, 结束位]
+     */
+    public static final int[][] HEIGHT_BIT_RANGES = {
+            {32, 32},   // a0: 第32位
+            {26, 31},   // a1a2: 第26-31位
+            {23, 25},   // a3: 第23-25位
+            {22, 22},   // a4: 第22位
+            {18, 21},   // a5: 第18-21位
+            {14, 17},   // a6: 第14-17位
+            {13, 13},   // a7: 第13位
+            {10, 12},   // a8: 第10-12位
+            {7, 9},     // a9: 第7-9位
+            {4, 6},     // a10: 第4-6位
+            {1, 3}      // a11: 第1-3位
     };
 
     /**
