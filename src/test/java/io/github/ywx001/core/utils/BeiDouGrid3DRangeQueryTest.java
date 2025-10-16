@@ -12,7 +12,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
-class BeiDouGrid2D3DRangeQueryTest {
+class BeiDouGrid3DRangeQueryTest {
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Test

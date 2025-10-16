@@ -3,6 +3,7 @@ package io.github.ywx001.core.decoder;
 import io.github.ywx001.core.constants.BeiDouGridConstants;
 import io.github.ywx001.core.model.BeiDouGeoPoint;
 import io.github.ywx001.core.common.BeiDouGridCommonUtils;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 北斗网格码解码器接口
  * 定义所有解码相关的操作
  */
+@Slf4j
 public class BeiDouGridDecoder {
 
     // 缓存编码映射表，避免重复创建
@@ -34,8 +36,14 @@ public class BeiDouGridDecoder {
         BeiDouGridConstants.LngDirection lngDir = BeiDouGridConstants.LngDirection.valueOf(directions.get("lngDirection"));
         BeiDouGridConstants.LatDirection latDir = BeiDouGridConstants.LatDirection.valueOf(directions.get("latDirection"));
 
+        // 调试日志：记录方向判断结果
+        log.debug("编码: {}, 经度方向: {}, 纬度方向: {}", code, lngDir, latDir);
+
         int lngSign = lngDir == BeiDouGridConstants.LngDirection.E ? 1 : -1;
         int latSign = latDir == BeiDouGridConstants.LatDirection.N ? 1 : -1;
+
+        // 调试日志：记录符号
+        log.debug("经度符号: {}, 纬度符号: {}", lngSign, latSign);
 
         double lngInSec = 0;
         double latInSec = 0;
@@ -46,12 +54,20 @@ public class BeiDouGridDecoder {
             latInSec += offsets[1];
         }
 
+        // 调试日志：记录累计秒数
+        log.debug("累计秒数 - 经度: {}秒, 纬度: {}秒", lngInSec, latInSec);
+
+        double longitude = (lngInSec * lngSign) / 3600;
+        double latitude = (latInSec * latSign) / 3600;
+
+        // 调试日志：记录最终坐标
+        log.debug("最终坐标 - 经度: {}°, 纬度: {}°", longitude, latitude);
+
         return BeiDouGeoPoint.builder()
-                .longitude((lngInSec * lngSign) / 3600)
-                .latitude((latInSec * latSign) / 3600)
+                .longitude(longitude)
+                .latitude(latitude)
                 .build();
     }
-
     /**
      * 解码三维网格编码为包含地理点和高度信息的 Map
      *
@@ -110,9 +126,21 @@ public class BeiDouGridDecoder {
      */
     private static Map<String, String> getDirections(String code) {
         Map<String, String> directions = new HashMap<>(2);
-        directions.put("latDirection", code.charAt(0) == 'N' ? "N" : "S");
+
+        // 纬度方向判断
+        char latChar = code.charAt(0);
+        String latDirection = latChar == 'N' ? "N" : "S";
+        directions.put("latDirection", latDirection);
+
+        // 经度方向判断
         int lngPart = Integer.parseInt(code.substring(1, 3));
-        directions.put("lngDirection", lngPart >= 31 ? "E" : "W");
+        String lngDirection = lngPart >= 31 ? "E" : "W";
+        directions.put("lngDirection", lngDirection);
+
+        // 调试日志：记录方向判断过程
+        log.debug("方向判断 - 编码首字符: {}, 纬度方向: {}, 经度部分: {}, 经度方向: {}",
+                 latChar, latDirection, lngPart, lngDirection);
+
         return directions;
     }
 
@@ -130,15 +158,25 @@ public class BeiDouGridDecoder {
         int lng = rowCol[0];
         int lat = rowCol[1];
 
+        // 调试日志：记录原始行列值
+        log.debug("第{}级网格解码 - 片段: {}, 原始行列: lng={}, lat={}", n, fragment, lng, lat);
+
         if (n == 1) {
             if (lng == 0) {
                 throw new IllegalArgumentException("暂不支持两极地区解码");
             }
+            // 调试日志：记录第一级网格调整前的值
+            log.debug("第一级网格调整前: lng={}, 判断条件: lng>=31?{}", lng, lng >= 31);
             lng = lng >= 31 ? lng - 31 : 30 - lng;
+            // 调试日志：记录调整后的值
+            log.debug("第一级网格调整后: lng={}", lng);
         }
 
         double lngOffset = lng * BeiDouGridConstants.GRID_SIZES_SECONDS[n][0];
         double latOffset = lat * BeiDouGridConstants.GRID_SIZES_SECONDS[n][1];
+
+        // 调试日志：记录最终偏移量
+        log.debug("第{}级网格偏移量: lngOffset={}秒, latOffset={}秒", n, lngOffset, latOffset);
 
         return new double[]{lngOffset, latOffset};
     }
@@ -153,6 +191,22 @@ public class BeiDouGridDecoder {
         int start = BeiDouGridConstants.CODE_LENGTH_AT_LEVEL[level - 1];
         int end = BeiDouGridConstants.CODE_LENGTH_AT_LEVEL[level];
         return code.substring(start, end);
+    }
+
+    /**
+     * 诊断辅助：返回每一级二维网格的行列索引（经度列、纬度行）。
+     * 仅用于定位问题，不影响编码逻辑。
+     */
+    public static int[][] debugDecode2DLevels(String code) {
+        int level = getCodeLevel2D(code);
+        int[][] indices = new int[level][2];
+        for (int i = 1; i <= level; i++) {
+            String frag = getCodeFragment(code, i);
+            int[] rc = getRowAndCol(frag, i, code);
+            indices[i - 1][0] = rc[0];
+            indices[i - 1][1] = rc[1];
+        }
+        return indices;
     }
 
     /**
@@ -212,11 +266,19 @@ public class BeiDouGridDecoder {
         int encoded = Integer.parseInt(codeFragment.substring(index, index + 1), 16);
         if (code != null) {
             String hemisphere = BeiDouGridCommonUtils.getHemisphereFromCode(code);
-            return switch (hemisphere) {
+
+            // 调试日志：记录二级网格解码过程
+            log.debug("二级网格解码 - 片段: {}, 半球: {}, 经度: {}, 原始编码: {}",
+                     codeFragment, hemisphere, isLng, encoded);
+
+            int result = switch (hemisphere) {
                 case "NE", "NW" -> encoded;
                 case "SE", "SW" -> isLng ? 11 - encoded : 7 - encoded;
                 default -> encoded;
             };
+
+            log.debug("二级网格解码结果: {}", result);
+            return result;
         }
         return encoded;
     }
@@ -229,11 +291,19 @@ public class BeiDouGridDecoder {
         int encoded = Integer.parseInt(codeFragment.substring(index, index + 1), 16);
         if (code != null) {
             String hemisphere = BeiDouGridCommonUtils.getHemisphereFromCode(code);
-            return switch (hemisphere) {
+
+            // 调试日志：记录四级/五级网格解码过程
+            log.debug("四级/五级网格解码 - 片段: {}, 半球: {}, 经度: {}, 原始编码: {}",
+                     codeFragment, hemisphere, isLng, encoded);
+
+            int result = switch (hemisphere) {
                 case "NE", "NW" -> encoded;
                 case "SE", "SW" -> 14 - encoded;
                 default -> encoded;
             };
+
+            log.debug("四级/五级网格解码结果: {}", result);
+            return result;
         }
         return encoded;
     }
@@ -377,7 +447,7 @@ public class BeiDouGridDecoder {
             // 按照标准将编码值放置到正确的位位置
             int[] bitRange = BeiDouGridConstants.HEIGHT_BIT_RANGES[i];
             int startBit = bitRange[0];
-            
+
             // 将heightIndex的各位设置到n的相应位置（从第1位开始计数）
             for (int bit = 0; bit < (bitRange[1] - bitRange[0] + 1); bit++) {
                 if (((heightIndex >> bit) & 1) == 1) {

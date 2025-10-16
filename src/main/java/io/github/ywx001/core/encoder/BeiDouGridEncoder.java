@@ -146,16 +146,11 @@ public class BeiDouGridEncoder {
         n = Math.abs(n);
 
         // 将高度编码转换为32位二进制字符串
-        StringBuilder binaryString = new StringBuilder();
-        binaryString.append(signCode); // 高度方向位
+        StringBuilder binaryString = buildBinaryString(n, signCode);
 
-        // 生成31位二进制表示
-        for (int i = 30; i >= 0; i--) {
-            binaryString.append((n >> i) & 1);
-        }
-
-        // 获取纬度方向
-        String latDirection = point.getLatitude() >= 0 ? "N" : "S";
+        // 获取半球信息，用于网格码方向转换
+        String hemisphere = BeiDouGridCommonUtils.getHemisphere(point);
+        String latDirection = String.valueOf(hemisphere.charAt(0));
 
         // 构建结果
         StringBuilder result = new StringBuilder();
@@ -189,9 +184,17 @@ public class BeiDouGridEncoder {
                 // 生成二维编码片段
                 fragment2D = encodeFragment(i, lngIndex + 31, latIndex, BeiDouGridCommonUtils.getHemisphere(point));
             } else {
-                // 其他级别
+                // 其他级别 - 使用绝对值的差值计算索引
                 int lngIndex = (int) Math.floor((Math.abs(lngInSec) - lngOffset) / BeiDouGridConstants.GRID_SIZES_SECONDS[i][0]);
                 int latIndex = (int) Math.floor((Math.abs(latInSec) - latOffset) / BeiDouGridConstants.GRID_SIZES_SECONDS[i][1]);
+
+                // 调试日志：记录第三级网格索引计算
+                if (i == 3) {
+                    log.debug("L3索引诊断: lngInSec={}, lngOffset={}, gridSizeLng={}, lngIndex={}",
+                            Math.abs(lngInSec), lngOffset, BeiDouGridConstants.GRID_SIZES_SECONDS[i][0], lngIndex);
+                    log.debug("L3索引诊断: latInSec={}, latOffset={}, gridSizeLat={}, latIndex={}",
+                            Math.abs(latInSec), latOffset, BeiDouGridConstants.GRID_SIZES_SECONDS[i][1], latIndex);
+                }
 
                 // 更新偏移量
                 lngOffset += lngIndex * BeiDouGridConstants.GRID_SIZES_SECONDS[i][0];
@@ -199,6 +202,8 @@ public class BeiDouGridEncoder {
 
                 // 生成二维编码片段
                 fragment2D = encodeFragment(i, lngIndex, latIndex, BeiDouGridCommonUtils.getHemisphere(point));
+
+
             }
 
             // 添加二维编码片段
@@ -274,8 +279,18 @@ public class BeiDouGridEncoder {
      * 三级网格Z序编码（标准图4）
      */
     private static String encodeLevel3(int lngCount, int latCount, String hemisphere) {
+        log.debug("L3编码输入: lngCount={}, latCount={}, hemisphere={}", lngCount, latCount, hemisphere);
         int[][] encodingMap = getLevel3EncodingMap(hemisphere);
-        return String.valueOf(encodingMap[latCount][lngCount]);
+
+        // 调试：打印整个编码映射表
+        log.debug("L3编码映射表: {} hemisphere", hemisphere);
+        for (int i = 0; i < encodingMap.length; i++) {
+            log.debug("  行{}: [{}, {}]", i, encodingMap[i][0], encodingMap[i][1]);
+        }
+
+        String result = String.valueOf(encodingMap[latCount][lngCount]);
+        log.debug("L3编码结果: encodingMap[{}][{}] = {}", latCount, lngCount, result);
+        return result;
     }
 
     /**
