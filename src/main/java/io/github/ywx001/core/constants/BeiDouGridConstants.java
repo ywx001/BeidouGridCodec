@@ -2,6 +2,8 @@ package io.github.ywx001.core.constants;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 北斗网格码常量定义类
@@ -208,5 +210,37 @@ public class BeiDouGridConstants {
          * 南纬
          */
         S
+    }
+
+    // 缓存编码映射表，避免重复创建
+    private static final Map<String, int[][]> LEVEL3_ENCODING_MAP_CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, int[][]> LEVEL6_ENCODING_MAP_CACHE = new ConcurrentHashMap<>();
+
+    /**
+     * 获取三级网格编码映射表
+     * 使用缓存避免重复创建
+     */
+    public static int[][] getLevel3EncodingMap(String hemisphere) {
+        return LEVEL3_ENCODING_MAP_CACHE.computeIfAbsent(hemisphere, key -> switch (key) {
+            case "NW" -> new int[][]{{1, 0}, {3, 2}, {5, 4}};
+            case "NE" -> new int[][]{{0, 1}, {2, 3}, {4, 5}};
+            case "SW" -> new int[][]{{5, 4}, {3, 2}, {1, 0}};  // 恢复原始：与NE半球对称
+            case "SE" -> new int[][]{{4, 5}, {2, 3}, {0, 1}};  // 恢复原始：与NW半球对称
+            default -> new int[][]{{0, 1}, {2, 3}, {4, 5}}; // 默认东北半球
+        });
+    }
+
+    /**
+     * 获取六级网格编码映射表
+     * 使用缓存避免重复创建
+     */
+    public static int[][] getLevel6EncodingMap(String hemisphere) {
+        return LEVEL6_ENCODING_MAP_CACHE.computeIfAbsent(hemisphere, key -> switch (key) {
+            case "NW" -> new int[][]{{1, 0}, {3, 2}};
+            case "NE" -> new int[][]{{0, 1}, {2, 3}};
+            case "SW" -> new int[][]{{3, 2}, {1, 0}};
+            case "SE" -> new int[][]{{2, 3}, {0, 1}};
+            default -> new int[][]{{0, 1}, {2, 3}}; // 默认东北半球
+        });
     }
 }

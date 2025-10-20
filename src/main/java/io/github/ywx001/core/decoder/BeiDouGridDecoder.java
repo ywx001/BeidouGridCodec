@@ -1,13 +1,12 @@
 package io.github.ywx001.core.decoder;
 
+import io.github.ywx001.core.common.BeiDouGridCommonUtils;
 import io.github.ywx001.core.constants.BeiDouGridConstants;
 import io.github.ywx001.core.model.BeiDouGeoPoint;
-import io.github.ywx001.core.common.BeiDouGridCommonUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 北斗网格码解码器接口
@@ -15,10 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 public class BeiDouGridDecoder {
-
-    // 缓存编码映射表，避免重复创建
-    private static final Map<String, int[][]> LEVEL3_ENCODING_MAP_CACHE = new ConcurrentHashMap<>();
-    private static final Map<String, int[][]> LEVEL6_ENCODING_MAP_CACHE = new ConcurrentHashMap<>();
 
     /**
      * 解码二维网格编码为地理点
@@ -68,6 +63,7 @@ public class BeiDouGridDecoder {
                 .latitude(latitude)
                 .build();
     }
+
     /**
      * 解码三维网格编码为包含地理点和高度信息的 Map
      *
@@ -92,6 +88,13 @@ public class BeiDouGridDecoder {
 
     /**
      * 获取二维网格码的层级
+     *
+     * <p>根据北斗网格编码标准，每个层级的网格码有固定的长度。</p>
+     *
+     * @param code 二维网格编码字符串
+     * @return 网格层级（1-10）
+     * @throws IllegalArgumentException 如果编码长度不符合任何已知层级
+     * @see BeiDouGridConstants#CODE_LENGTH_AT_LEVEL 各级网格编码长度定义
      */
     public static int getCodeLevel2D(String code) {
         int length = code.length();
@@ -105,6 +108,13 @@ public class BeiDouGridDecoder {
 
     /**
      * 获取三维网格码的层级
+     *
+     * <p>三维网格码包含二维编码部分和高度编码部分，总长度根据层级变化。</p>
+     *
+     * @param code 三维网格编码字符串
+     * @return 网格层级（1-10）
+     * @throws IllegalArgumentException 如果编码长度不符合任何已知层级
+     * @see BeiDouGridConstants#CODE_LENGTH_AT_LEVEL 各级网格编码长度定义
      */
     public static int getCodeLevel3D(String code) {
         int length = code.length();
@@ -123,6 +133,15 @@ public class BeiDouGridDecoder {
 
     /**
      * 获取经纬度方向
+     *
+     * <p>根据网格码的首字符和经度部分判断经纬度方向：</p>
+     * <ul>
+     *   <li>纬度方向：首字符为'N'表示北纬，'S'表示南纬</li>
+     *   <li>经度方向：前两位数字>=31表示东经，否则为西经</li>
+     * </ul>
+     *
+     * @param code 网格编码字符串
+     * @return 包含经纬度方向的Map，键为"lngDirection"和"latDirection"
      */
     private static Map<String, String> getDirections(String code) {
         Map<String, String> directions = new HashMap<>(2);
@@ -139,13 +158,22 @@ public class BeiDouGridDecoder {
 
         // 调试日志：记录方向判断过程
         log.debug("方向判断 - 编码首字符: {}, 纬度方向: {}, 经度部分: {}, 经度方向: {}",
-                 latChar, latDirection, lngPart, lngDirection);
+                latChar, latDirection, lngPart, lngDirection);
 
         return directions;
     }
 
     /**
      * 解码第n级网格码
+     *
+     * <p>解析指定层级的网格编码片段，计算该层级对应的经纬度偏移量。</p>
+     *
+     * @param code 完整的网格编码字符串
+     * @param n    要解码的层级（1-10）
+     * @return 包含经度偏移量和纬度偏移量的数组，单位：秒
+     * @throws IllegalArgumentException 如果层级不在有效范围内
+     * @see #getCodeFragment(String, int) 获取层级片段
+     * @see #getRowAndCol(String, int, String) 解析行列号
      */
     private static double[] decodeN(String code, int n) {
         if (n < 1 || n > 10) {
@@ -183,6 +211,13 @@ public class BeiDouGridDecoder {
 
     /**
      * 获取某一层级的位置码片段
+     *
+     * <p>根据层级索引从完整编码中提取对应的片段。</p>
+     *
+     * @param code  完整的网格编码字符串
+     * @param level 要提取的层级（0-10）
+     * @return 指定层级的编码片段
+     * @see BeiDouGridConstants#CODE_LENGTH_AT_LEVEL 各级网格编码长度定义
      */
     private static String getCodeFragment(String code, int level) {
         if (level == 0) {
@@ -194,23 +229,15 @@ public class BeiDouGridDecoder {
     }
 
     /**
-     * 诊断辅助：返回每一级二维网格的行列索引（经度列、纬度行）。
-     * 仅用于定位问题，不影响编码逻辑。
-     */
-    public static int[][] debugDecode2DLevels(String code) {
-        int level = getCodeLevel2D(code);
-        int[][] indices = new int[level][2];
-        for (int i = 1; i <= level; i++) {
-            String frag = getCodeFragment(code, i);
-            int[] rc = getRowAndCol(frag, i, code);
-            indices[i - 1][0] = rc[0];
-            indices[i - 1][1] = rc[1];
-        }
-        return indices;
-    }
-
-    /**
      * 解析行列号
+     *
+     * <p>根据层级和编码片段解析出经度列索引和纬度行索引。</p>
+     *
+     * @param codeFragment 指定层级的编码片段
+     * @param level        当前层级（1-10）
+     * @param code         完整的网格编码（用于获取半球信息）
+     * @return 包含经度列索引和纬度行索引的数组[经度索引, 纬度索引]
+     * @throws IllegalArgumentException 如果编码片段长度不符合预期或层级不支持
      */
     private static int[] getRowAndCol(String codeFragment, int level, String code) {
         if (codeFragment.length() != (BeiDouGridConstants.CODE_LENGTH_AT_LEVEL[level] - BeiDouGridConstants.CODE_LENGTH_AT_LEVEL[level - 1])) {
@@ -260,6 +287,13 @@ public class BeiDouGridDecoder {
 
     /**
      * 解码二级网格
+     *
+     * <p>解析二级网格编码片段，返回经度或纬度的索引值。</p>
+     *
+     * @param codeFragment 二级网格编码片段
+     * @param code         完整的网格编码（用于获取半球信息）
+     * @param isLng        是否为经度方向（true表示经度，false表示纬度）
+     * @return 经度或纬度的索引值
      */
     private static int decodeLevel2(String codeFragment, String code, boolean isLng) {
         int index = isLng ? 0 : 1;
@@ -269,22 +303,22 @@ public class BeiDouGridDecoder {
 
             // 调试日志：记录二级网格解码过程
             log.debug("二级网格解码 - 片段: {}, 半球: {}, 经度: {}, 原始编码: {}",
-                     codeFragment, hemisphere, isLng, encoded);
+                    codeFragment, hemisphere, isLng, encoded);
 
-            int result = switch (hemisphere) {
-                case "NE", "NW" -> encoded;
-                case "SE", "SW" -> isLng ? 11 - encoded : 7 - encoded;
-                default -> encoded;
-            };
-
-            log.debug("二级网格解码结果: {}", result);
-            return result;
+            return encoded;
         }
         return encoded;
     }
 
     /**
      * 解码四级/五级网格
+     *
+     * <p>解析四级或五级网格编码片段，返回经度或纬度的索引值。</p>
+     *
+     * @param codeFragment 四级或五级网格编码片段
+     * @param code         完整的网格编码（用于获取半球信息）
+     * @param isLng        是否为经度方向（true表示经度，false表示纬度）
+     * @return 经度或纬度的索引值
      */
     private static int decodeLevel4_5(String codeFragment, String code, boolean isLng) {
         int index = isLng ? 0 : 1;
@@ -294,22 +328,22 @@ public class BeiDouGridDecoder {
 
             // 调试日志：记录四级/五级网格解码过程
             log.debug("四级/五级网格解码 - 片段: {}, 半球: {}, 经度: {}, 原始编码: {}",
-                     codeFragment, hemisphere, isLng, encoded);
+                    codeFragment, hemisphere, isLng, encoded);
 
-            int result = switch (hemisphere) {
-                case "NE", "NW" -> encoded;
-                case "SE", "SW" -> 14 - encoded;
-                default -> encoded;
-            };
-
-            log.debug("四级/五级网格解码结果: {}", result);
-            return result;
+            return encoded;
         }
         return encoded;
     }
 
     /**
      * 解码三级网格
+     *
+     * <p>解析三级网格编码片段，返回经度和纬度的索引值。</p>
+     *
+     * @param codeFragment 三级网格编码片段（1位数字）
+     * @param code         完整的网格编码（用于获取半球信息）
+     * @return 包含经度索引和纬度索引的数组[经度索引, 纬度索引]
+     * @throws IllegalArgumentException 如果编码值无效
      */
     private static int[] decodeLevel3(String codeFragment, String code) {
         int n = Integer.parseInt(codeFragment);
@@ -317,7 +351,7 @@ public class BeiDouGridDecoder {
 
         if (code != null) {
             String hemisphere = BeiDouGridCommonUtils.getHemisphereFromCode(code);
-            int[][] encodingMap = getLevel3EncodingMap(hemisphere);
+            int[][] encodingMap = BeiDouGridConstants.getLevel3EncodingMap(hemisphere);
             boolean found = false;
 
             for (int i = 0; i < encodingMap.length && !found; i++) {
@@ -334,6 +368,9 @@ public class BeiDouGridDecoder {
             if (!found) {
                 throw new IllegalArgumentException("无效的三级网格编码: " + n);
             }
+
+            // 根据半球信息进行调整
+            indices = BeiDouGridCommonUtils.adjustCounts(indices[0], indices[1], hemisphere, 1, 2);
         } else {
             if (n <= 1) {
                 indices[0] = n;
@@ -352,6 +389,13 @@ public class BeiDouGridDecoder {
 
     /**
      * 解码六级网格
+     *
+     * <p>解析六级网格编码片段，返回经度和纬度的索引值。</p>
+     *
+     * @param codeFragment 六级网格编码片段（1位数字）
+     * @param code         完整的网格编码（用于获取半球信息）
+     * @return 包含经度索引和纬度索引的数组[经度索引, 纬度索引]
+     * @throws IllegalArgumentException 如果编码值无效
      */
     private static int[] decodeLevel6(String codeFragment, String code) {
         int n = Integer.parseInt(codeFragment);
@@ -359,7 +403,7 @@ public class BeiDouGridDecoder {
 
         if (code != null) {
             String hemisphere = BeiDouGridCommonUtils.getHemisphereFromCode(code);
-            int[][] encodingMap = getLevel6EncodingMap(hemisphere);
+            int[][] encodingMap = BeiDouGridConstants.getLevel6EncodingMap(hemisphere);
             boolean found = false;
 
             for (int i = 0; i < encodingMap.length && !found; i++) {
@@ -376,6 +420,9 @@ public class BeiDouGridDecoder {
             if (!found) {
                 throw new IllegalArgumentException("无效的六级网格编码: " + n);
             }
+
+            // 根据半球信息进行调整
+            indices = BeiDouGridCommonUtils.adjustCounts(indices[0], indices[1], hemisphere, 1, 1);
         } else {
             if (n <= 1) {
                 indices[0] = n;
@@ -391,6 +438,12 @@ public class BeiDouGridDecoder {
 
     /**
      * 从三维编码中提取二维编码部分
+     *
+     * <p>从三维网格编码中分离出二维地理编码部分。</p>
+     *
+     * @param code3D 三维网格编码字符串
+     * @param level  三维网格层级（1-10）
+     * @return 提取出的二维网格编码
      */
     public static String extract2DCode(String code3D, int level) {
         StringBuilder code2D = new StringBuilder();
@@ -415,6 +468,14 @@ public class BeiDouGridDecoder {
 
     /**
      * 从三维编码中解码高度信息（网格底平面高度）
+     *
+     * <p>解析三维网格编码中的高度部分，计算网格底平面的海拔高度。</p>
+     *
+     * @param code  三维网格编码字符串
+     * @param level 三维网格层级（1-10）
+     * @return 网格底平面的海拔高度（米），正值表示地上，负值表示地下
+     * @see BeiDouGridConstants#HEIGHT_BIT_RANGES 高度位范围定义
+     * @see BeiDouGridConstants#ELEVATION_ENCODING 高度编码进制定义
      */
     private static double decode3DHeight(String code, int level) {
         // 高度方向符号：0表示地上，1表示地下
@@ -442,6 +503,7 @@ public class BeiDouGridDecoder {
             } else {
                 int radix = BeiDouGridConstants.ELEVATION_ENCODING[i][1];
                 heightIndex = Integer.parseInt(heightCodeStr, radix);
+
             }
 
             // 按照标准将编码值放置到正确的位位置
@@ -465,29 +527,4 @@ public class BeiDouGridDecoder {
         return height * heightSign;
     }
 
-    /**
-     * 获取三级网格编码映射表
-     */
-    private static int[][] getLevel3EncodingMap(String hemisphere) {
-        return LEVEL3_ENCODING_MAP_CACHE.computeIfAbsent(hemisphere, key -> switch (key) {
-            case "NW" -> new int[][]{{1, 0}, {3, 2}, {5, 4}};
-            case "NE" -> new int[][]{{0, 1}, {2, 3}, {4, 5}};
-            case "SW" -> new int[][]{{5, 4}, {3, 2}, {1, 0}};
-            case "SE" -> new int[][]{{4, 5}, {2, 3}, {0, 1}};
-            default -> new int[][]{{0, 1}, {2, 3}, {4, 5}};
-        });
-    }
-
-    /**
-     * 获取六级网格编码映射表
-     */
-    private static int[][] getLevel6EncodingMap(String hemisphere) {
-        return LEVEL6_ENCODING_MAP_CACHE.computeIfAbsent(hemisphere, key -> switch (key) {
-            case "NW" -> new int[][]{{1, 0}, {3, 2}};
-            case "NE" -> new int[][]{{0, 1}, {2, 3}};
-            case "SW" -> new int[][]{{3, 2}, {1, 0}};
-            case "SE" -> new int[][]{{2, 3}, {0, 1}};
-            default -> new int[][]{{0, 1}, {2, 3}};
-        });
-    }
 }

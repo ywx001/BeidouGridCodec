@@ -58,4 +58,18 @@ public class BeiDouGridCommonUtils {
         return latDir + lngDir;
     }
 
+    /**
+     * 方向调整通用方法
+     * 根据半球信息调整经纬度网格索引
+     */
+    public static int[] adjustCounts(int lng, int lat, String hemisphere, int maxLng, int maxLat) {
+        return switch (hemisphere) {
+            case "NW" -> new int[]{maxLng - lng, lat};
+            case "NE" -> new int[]{lng, lat};
+            case "SW" -> new int[]{maxLng - lng, maxLat - lat};
+            case "SE" -> new int[]{lng, maxLat - lat};
+            default -> new int[]{lng, lat};                   // 默认NE规则
+        };
+    }
+
 }
