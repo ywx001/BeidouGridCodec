@@ -5,13 +5,13 @@ import io.github.ywx001.core.decoder.BeiDouGridDecoder;
 import io.github.ywx001.core.encoder.BeiDouGridEncoder;
 import io.github.ywx001.core.model.BeiDouGeoPoint;
 import io.github.ywx001.core.utils.BeiDouGridUtils;
-import io.github.ywx001.core.utils.GisUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -67,34 +67,241 @@ public class BeiDouGrid3DRangeQuery {
      */
     public static List<String> find3DGridCodesWithLineString(LineString lineString, int targetLevel) {
         long startTime = System.currentTimeMillis();
-        List<String> result = new ArrayList<>();
-        //获取被点填充好的线
-        Geometry newGeom = GisUtils.lineFillPoints(lineString, BeiDouGridConstants.GRID_SIZES_3D[targetLevel]);
-        Coordinate[] coordinates = newGeom.getCoordinates();
-        List<BeiDouGeoPoint> beiDouGeoPoints = new ArrayList<>();
-        for (Coordinate coordinate : coordinates) {
-            //计算三维网格
-            String code = BeiDouGridUtils.encode3D(new BeiDouGeoPoint(coordinate.x, coordinate.y, coordinate.z), targetLevel);
-            BeiDouGeoPoint beiDouGeoPoint = BeiDouGridDecoder.decode3D(code);
-            if (beiDouGeoPoints.size() > 1) {
-                double lastGridLng = beiDouGeoPoints.get(beiDouGeoPoints.size() - 1).getLongitude();
-                double lastGridLat = beiDouGeoPoints.get(beiDouGeoPoints.size() - 1).getLatitude();
-                double lastGridHeight = beiDouGeoPoints.get(beiDouGeoPoints.size() - 1).getHeight();
+        validateLineStringParameters(lineString, targetLevel);
 
-                BeiDouGeoPoint lastBeiDouGeoPoint = new BeiDouGeoPoint(lastGridLng, lastGridLat, lastGridHeight);
-                //去重判断
-                if (!beiDouGeoPoint.equals(lastBeiDouGeoPoint)){
-                    beiDouGeoPoints.add(beiDouGeoPoint);
-                    result.add(code);
-                }
-            } else {
-                beiDouGeoPoints.add(beiDouGeoPoint);
-                result.add(code);
-            }
+        Set<String> result = new LinkedHashSet<>();
+        Coordinate[] coordinates = lineString.getCoordinates();
+        for (int i = 0; i < coordinates.length - 1; i++) {
+            collectSegmentGridCodes(coordinates[i], coordinates[i + 1], targetLevel, result);
         }
         long totalTime = System.currentTimeMillis() - startTime;
         log.debug("线查询完成：找到 {} 个{}级网格，总耗时 {}ms", result.size(), targetLevel, totalTime);
-        return result;
+        return new ArrayList<>(result);
+    }
+
+    /**
+     * 使用网格边界推进算法遍历线段经过的三维网格，避免固定距离插点造成漏格。
+     */
+    private static void collectSegmentGridCodes(Coordinate start, Coordinate end,
+                                                int targetLevel, Set<String> result) {
+        Coordinate startPoint = normalizeCoordinate(start);
+        Coordinate endPoint = normalizeCoordinate(end);
+
+        addGridCode(startPoint, targetLevel, result);
+        if (isSamePoint(startPoint, endPoint)) {
+            return;
+        }
+
+        double t = 0.0;
+        double stepEpsilon = calculateParamEpsilon(startPoint, endPoint, targetLevel);
+        int maxIterations = estimateMaxTraversalIterations(startPoint, endPoint, targetLevel);
+
+        for (int i = 0; i < maxIterations && t < 1.0; i++) {
+            Coordinate current = interpolate(startPoint, endPoint, t);
+            String currentCode = addGridCode(current, targetLevel, result);
+            GridBounds bounds = getGridBounds(currentCode, targetLevel);
+            BoundaryCrossing crossing = findNextBoundaryCrossing(startPoint, endPoint, bounds, t);
+
+            if (crossing.t >= 1.0 || Double.isInfinite(crossing.t)) {
+                addGridCode(endPoint, targetLevel, result);
+                return;
+            }
+
+            addBoundaryTouchingGridCodes(startPoint, endPoint, crossing, targetLevel, result);
+            t = Math.min(1.0, crossing.t + stepEpsilon);
+        }
+
+        addGridCode(endPoint, targetLevel, result);
+    }
+
+    private static void validateLineStringParameters(LineString lineString, int targetLevel) {
+        if (lineString == null) {
+            throw new IllegalArgumentException("线不能为空");
+        }
+        if (targetLevel < 1 || targetLevel > 10) {
+            throw new IllegalArgumentException("目标层级必须在1到10之间");
+        }
+        if (lineString.getNumPoints() == 0) {
+            throw new IllegalArgumentException("线至少需要包含一个点");
+        }
+    }
+
+    private static Coordinate normalizeCoordinate(Coordinate coordinate) {
+        double height = Double.isNaN(coordinate.z) ? 0.0 : coordinate.z;
+        return new Coordinate(coordinate.x, coordinate.y, height);
+    }
+
+    private static boolean isSamePoint(Coordinate p1, Coordinate p2) {
+        return p1.x == p2.x && p1.y == p2.y && p1.z == p2.z;
+    }
+
+    private static String addGridCode(Coordinate coordinate, int targetLevel, Set<String> result) {
+        String code = BeiDouGridUtils.encode3D(new BeiDouGeoPoint(coordinate.x, coordinate.y, coordinate.z), targetLevel);
+        result.add(code);
+        return code;
+    }
+
+    private static GridBounds getGridBounds(String gridCode, int targetLevel) {
+        BeiDouGeoPoint swPoint = BeiDouGridDecoder.decode3D(gridCode);
+        BigDecimal[] gridSize = BeiDouGridConstants.GRID_SIZES_DEGREES[targetLevel];
+        double lngSize = gridSize[0].doubleValue();
+        double latSize = gridSize[1].doubleValue();
+        double heightSize = getGridHeight3D(targetLevel);
+        return new GridBounds(
+                swPoint.getLongitude(), swPoint.getLongitude() + lngSize,
+                swPoint.getLatitude(), swPoint.getLatitude() + latSize,
+                swPoint.getHeight(), swPoint.getHeight() + heightSize
+        );
+    }
+
+    private static BoundaryCrossing findNextBoundaryCrossing(Coordinate start, Coordinate end,
+                                                             GridBounds bounds, double currentT) {
+        double dx = end.x - start.x;
+        double dy = end.y - start.y;
+        double dz = end.z - start.z;
+
+        double tx = calculateBoundaryT(start.x, dx, bounds.minLng, bounds.maxLng, currentT);
+        double ty = calculateBoundaryT(start.y, dy, bounds.minLat, bounds.maxLat, currentT);
+        double tz = calculateBoundaryT(start.z, dz, bounds.minHeight, bounds.maxHeight, currentT);
+        double nextT = Math.min(tx, Math.min(ty, tz));
+
+        double tolerance = 1e-12;
+        return new BoundaryCrossing(
+                nextT,
+                Math.abs(tx - nextT) <= tolerance,
+                Math.abs(ty - nextT) <= tolerance,
+                Math.abs(tz - nextT) <= tolerance
+        );
+    }
+
+    private static double calculateBoundaryT(double startValue, double delta,
+                                             double minValue, double maxValue, double currentT) {
+        if (delta == 0.0) {
+            return Double.POSITIVE_INFINITY;
+        }
+        double boundary = delta > 0.0 ? maxValue : minValue;
+        double t = (boundary - startValue) / delta;
+        return t > currentT + 1e-12 ? t : Double.POSITIVE_INFINITY;
+    }
+
+    private static void addBoundaryTouchingGridCodes(Coordinate start, Coordinate end,
+                                                     BoundaryCrossing crossing, int targetLevel,
+                                                     Set<String> result) {
+        Coordinate boundaryPoint = interpolate(start, end, crossing.t);
+        double lngEpsilon = BeiDouGridConstants.GRID_SIZES_DEGREES[targetLevel][0].doubleValue() * 1e-3;
+        double latEpsilon = BeiDouGridConstants.GRID_SIZES_DEGREES[targetLevel][1].doubleValue() * 1e-3;
+        double heightEpsilon = getGridHeight3D(targetLevel) * 1e-3;
+
+        List<double[]> offsets = new ArrayList<>();
+        offsets.add(new double[]{0.0, 0.0, 0.0});
+        if (crossing.crossLng) {
+            offsets = expandOffsets(offsets, 0, lngEpsilon);
+        }
+        if (crossing.crossLat) {
+            offsets = expandOffsets(offsets, 1, latEpsilon);
+        }
+        if (crossing.crossHeight) {
+            offsets = expandOffsets(offsets, 2, heightEpsilon);
+        }
+
+        for (double[] offset : offsets) {
+            addGridCode(new Coordinate(
+                    boundaryPoint.x + offset[0],
+                    boundaryPoint.y + offset[1],
+                    boundaryPoint.z + offset[2]
+            ), targetLevel, result);
+        }
+    }
+
+    private static List<double[]> expandOffsets(List<double[]> offsets, int axis, double epsilon) {
+        List<double[]> expanded = new ArrayList<>(offsets.size() * 2);
+        for (double[] offset : offsets) {
+            double[] negative = offset.clone();
+            negative[axis] = -epsilon;
+            expanded.add(negative);
+
+            double[] positive = offset.clone();
+            positive[axis] = epsilon;
+            expanded.add(positive);
+        }
+        return expanded;
+    }
+
+    private static Coordinate interpolate(Coordinate start, Coordinate end, double t) {
+        return new Coordinate(
+                start.x + (end.x - start.x) * t,
+                start.y + (end.y - start.y) * t,
+                start.z + (end.z - start.z) * t
+        );
+    }
+
+    private static double calculateParamEpsilon(Coordinate start, Coordinate end, int targetLevel) {
+        double dx = Math.abs(end.x - start.x);
+        double dy = Math.abs(end.y - start.y);
+        double dz = Math.abs(end.z - start.z);
+        double lngSize = BeiDouGridConstants.GRID_SIZES_DEGREES[targetLevel][0].doubleValue();
+        double latSize = BeiDouGridConstants.GRID_SIZES_DEGREES[targetLevel][1].doubleValue();
+        double heightSize = getGridHeight3D(targetLevel);
+
+        double epsilon = 1e-10;
+        if (dx > 0.0) {
+            epsilon = Math.min(epsilon, lngSize / dx * 1e-3);
+        }
+        if (dy > 0.0) {
+            epsilon = Math.min(epsilon, latSize / dy * 1e-3);
+        }
+        if (dz > 0.0) {
+            epsilon = Math.min(epsilon, heightSize / dz * 1e-3);
+        }
+        return Math.max(epsilon, 1e-15);
+    }
+
+    private static int estimateMaxTraversalIterations(Coordinate start, Coordinate end, int targetLevel) {
+        double dx = Math.abs(end.x - start.x);
+        double dy = Math.abs(end.y - start.y);
+        double dz = Math.abs(end.z - start.z);
+        double lngSize = BeiDouGridConstants.GRID_SIZES_DEGREES[targetLevel][0].doubleValue();
+        double latSize = BeiDouGridConstants.GRID_SIZES_DEGREES[targetLevel][1].doubleValue();
+        double heightSize = getGridHeight3D(targetLevel);
+
+        long estimate = 2;
+        estimate += (long) Math.ceil(dx / lngSize);
+        estimate += (long) Math.ceil(dy / latSize);
+        estimate += (long) Math.ceil(dz / heightSize);
+        return (int) Math.min(Math.max(estimate * 4, 32), 5_000_000);
+    }
+
+    private static final class GridBounds {
+        private final double minLng;
+        private final double maxLng;
+        private final double minLat;
+        private final double maxLat;
+        private final double minHeight;
+        private final double maxHeight;
+
+        private GridBounds(double minLng, double maxLng, double minLat, double maxLat,
+                           double minHeight, double maxHeight) {
+            this.minLng = minLng;
+            this.maxLng = maxLng;
+            this.minLat = minLat;
+            this.maxLat = maxLat;
+            this.minHeight = minHeight;
+            this.maxHeight = maxHeight;
+        }
+    }
+
+    private static final class BoundaryCrossing {
+        private final double t;
+        private final boolean crossLng;
+        private final boolean crossLat;
+        private final boolean crossHeight;
+
+        private BoundaryCrossing(double t, boolean crossLng, boolean crossLat, boolean crossHeight) {
+            this.t = t;
+            this.crossLng = crossLng;
+            this.crossLat = crossLat;
+            this.crossHeight = crossHeight;
+        }
     }
 
     /**
