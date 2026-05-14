@@ -6,10 +6,10 @@
         </encoder>
     </appender>
 
-    <!-- 测试包及其子包使用DEBUG级别 -->
-    <logger name="io.github.ywx001.core.utils" level="DEBUG" />
+    <!-- 测试包及其子包使用INFO级别，避免范围查询生成海量DEBUG日志 -->
+    <logger name="io.github.ywx001.core.utils" level="INFO" />
 
-    <root level="DEBUG">
+    <root level="INFO">
         <appender-ref ref="STDOUT" />
     </root>
 </configuration>
